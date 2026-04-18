@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "framework": "drizzle",
+  "language": "typescript",
+  "rules": [
+    {
+      "ruleId": "drizzle-sql-injection",
+      "severity": "critical",
+      "message": "Drizzle sql`` tagged template with user-controlled interpolation",
+      "detail": "Using sql`...${userInput}...` safely parameterises the value, but using sql.raw() or string concatenation before the tagged template bypasses this protection. Never use sql.raw() with user input.",
+      "cves": [
+        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "sql\\.raw\\s*\\([^)]*(?:req\\.|body\\.|params\\.|query\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "sql\\.raw\\s*\\(`[^`]*\\$\\{", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "db\\.execute\\s*\\(\\s*sql\\.raw\\s*\\(", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["sql`", "placeholder\\(\\)", "parameterized"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "drizzle-where-missing",
+      "severity": "warning",
+      "message": "Drizzle delete() or update() without a where clause",
+      "detail": "Calling delete() or update() without .where() affects all rows in the table. Always specify a where clause to limit the scope of mutations.",
+      "cves": [
+        { "id": "CWE-284", "url": "https://cwe.mitre.org/data/definitions/284.html", "description": "Improper Access Control" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "db\\.delete\\s*\\([^)]+\\)\\.(?:execute|returning)\\s*\\((?![^)]*where)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "db\\.update\\s*\\([^)]+\\)\\.set\\s*\\([^)]+\\)\\.(?:execute|returning)\\s*\\((?![^)]*where)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["\\.where\\s*\\(", "eq\\(", "and\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "drizzle-unvalidated-insert",
+      "severity": "warning",
+      "message": "Drizzle insert() with unvalidated request body spread",
+      "detail": "Spreading the full request body into insert().values() allows users to set columns they shouldn't control. Validate and pick permitted fields before inserting.",
+      "cves": [
+        { "id": "CWE-915", "url": "https://cwe.mitre.org/data/definitions/915.html", "description": "Improperly Controlled Modification of Object Attributes" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.values\\s*\\(\\s*(?:req\\.body|body|request\\.body)\\s*\\)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.values\\s*\\(\\s*\\{\\s*\\.\\.\\.[^}]*body", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["pick\\(", "omit\\(", "z\\.object\\(", "schema\\.parse\\(", "zod"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "drizzle-user-controlled-orderby",
+      "severity": "critical",
+      "message": "Drizzle orderBy() with user-controlled column — SQL injection risk",
+      "detail": "Passing user input directly to orderBy() or using sql.raw() for ordering allows SQL injection. Use a whitelist mapping user values to Drizzle column references.",
+      "cves": [
+        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.orderBy\\s*\\(\\s*sql\\.raw\\s*\\([^)]*(?:req\\.|body\\.|params\\.|query\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.orderBy\\s*\\(\\s*(?:req\\.|body\\.|params\\.|query\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["ALLOWED_SORT_COLUMNS", "sortColumnMap", "whitelist", "if.*in.*allowedColumns"],
+      "requiresTaint": true
+    }
+  ]
+}

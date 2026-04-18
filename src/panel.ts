@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { Finding, AIFingerprint, CVERef, RULES_COUNT } from "./analyser";
 import { SEMANTIC_RULES_COUNT } from "./semanticAnalyser";
+import { suppressNextPaste } from "./detector";
 
 interface IgnoreMessage {
   type: "ignoreThis";
@@ -45,9 +46,16 @@ export class PasteGuardPanel {
   private panel: vscode.WebviewPanel | undefined;
   private disposables: vscode.Disposable[] = [];
   private _currentFindings: Finding[] = [];
+  private _currentFp: AIFingerprint = { isAI: false, confidence: "low" };
+  private _onIgnore?: (findings: Finding[]) => void;
+
+  public constructor(onIgnore?: (findings: Finding[]) => void) {
+    this._onIgnore = onIgnore;
+  }
 
   public show(findings: Finding[], fp: AIFingerprint): void {
     this._currentFindings = findings;
+    this._currentFp = fp;
 
     if (this.panel) {
       this.panel.webview.html = this.buildHtml(findings, fp);
@@ -75,7 +83,14 @@ export class PasteGuardPanel {
           if (!editor) { return; }
           const line = editor.document.lineAt(finding.line);
           const newText = `${line.text} // shieldprompt-ignore: ${finding.ruleId}`;
+          suppressNextPaste();
           await editor.edit((eb) => { eb.replace(line.range, newText); });
+          // Remove this finding and re-render the panel with the rest
+          this._currentFindings = this._currentFindings.filter((_, i) => i !== message.findingIndex);
+          if (this.panel) {
+            this.panel.webview.html = this.buildHtml(this._currentFindings, this._currentFp);
+          }
+          this._onIgnore?.(this._currentFindings);
           vscode.window.showInformationMessage(
             `ShieldPrompt: Rule ${finding.ruleId} ignored on line ${finding.line + 1}.`
           );

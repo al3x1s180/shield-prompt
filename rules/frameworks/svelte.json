@@ -1,0 +1,107 @@
+{
+  "version": 2,
+  "framework": "svelte",
+  "language": "javascript",
+  "rules": [
+    {
+      "ruleId": "svelte-html-xss",
+      "severity": "critical",
+      "message": "{@html} with user-controlled content enables XSS",
+      "detail": "Svelte's {@html} tag renders raw HTML without escaping. Never use it with user input, route params, or API data unless sanitised with DOMPurify.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\{@html\\s+(?!DOMPurify|sanitize)[^}]+\\}", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\{@html\\s+(?:data\\.|params\\.|body\\.|content|html|markup|post|article)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["DOMPurify\\.sanitize\\(", "sanitizeHtml\\(", "xss\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "svelte-server-load-no-auth",
+      "severity": "critical",
+      "message": "SvelteKit load() function missing auth check",
+      "detail": "SvelteKit load() functions run on the server for every page request. Without an auth check, unauthenticated users can load protected data. Check locals.user or call getSession() at the top.",
+      "cves": [
+        { "id": "CWE-306", "url": "https://cwe.mitre.org/data/definitions/306.html", "description": "Missing Authentication for Critical Function" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "export\\s+(?:async\\s+)?function\\s+load\\s*\\(\\s*\\{", "flags": "gi", "context": "multiline", "windowLines": 8 }
+      ],
+      "safeguards": ["locals\\.user", "locals\\.session", "getSession\\(", "requireAuth\\(", "throw\\s+redirect\\(", "error\\(401", "authenticate"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "svelte-form-action-no-validate",
+      "severity": "critical",
+      "message": "SvelteKit form action missing input validation",
+      "detail": "SvelteKit form actions receive arbitrary FormData from users. Without schema validation, attackers can send unexpected values. Validate all fields with zod or similar before processing.",
+      "cves": [
+        { "id": "CWE-20", "url": "https://cwe.mitre.org/data/definitions/20.html", "description": "Improper Input Validation" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "const\\s+data\\s*=\\s*await\\s+request\\.formData\\s*\\(\\s*\\)", "flags": "gi", "context": "multiline", "windowLines": 6 }
+      ],
+      "safeguards": ["\\.parse\\(", "\\.safeParse\\(", "\\.validate\\(", "z\\.object", "zod", "joi\\."],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "svelte-env-client-exposure",
+      "severity": "critical",
+      "message": "Private environment variable imported in client-side Svelte component",
+      "detail": "Variables from $env/static/private or $env/dynamic/private must never be imported in client-side components. Use $env/static/public for values safe to expose.",
+      "cves": [
+        { "id": "CWE-200", "url": "https://cwe.mitre.org/data/definitions/200.html", "description": "Exposure of Sensitive Information" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "from\\s+['\"]\\$env/(?:static|dynamic)/private['\"]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["\\+server\\.ts", "\\+page\\.server\\.ts", "\\.server\\."],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "svelte-redirect-open-redirect",
+      "severity": "warning",
+      "message": "SvelteKit redirect() with user-controlled URL",
+      "detail": "Passing user-provided data to throw redirect() allows open redirect attacks. Validate URLs are relative paths or allowlisted domains.",
+      "cves": [
+        { "id": "CWE-601", "url": "https://cwe.mitre.org/data/definitions/601.html", "description": "URL Redirection to Untrusted Site" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "throw\\s+redirect\\s*\\(\\s*\\d+\\s*,\\s*(?!\\s*['\"`]/)[^)]*(?:params\\.|url\\.|formData)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["startsWith\\s*\\('/'\\)", "ALLOWED_REDIRECTS", "isRelative\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "svelte-ssrf-fetch",
+      "severity": "critical",
+      "message": "Server-side fetch with user-controlled URL in SvelteKit",
+      "detail": "Using fetch() in load() or form actions with URL from params/formData enables SSRF. Validate against an allowlist of permitted hosts.",
+      "cves": [
+        { "id": "CWE-918", "url": "https://cwe.mitre.org/data/definitions/918.html", "description": "Server-Side Request Forgery" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "fetch\\s*\\([^)]*(?:params\\.|url\\.searchParams|formData)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "fetch\\s*\\(\\s*`[^`]*\\$\\{(?:params|url|formData)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["ALLOWED_HOSTS", "allowedDomains", "new URL.*hostname"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "svelte-cookie-no-httponly",
+      "severity": "warning",
+      "message": "SvelteKit cookie set without HttpOnly or Secure flag",
+      "detail": "Cookies set via cookies.set() without httpOnly and secure flags can be stolen via XSS or intercepted over HTTP.",
+      "cves": [
+        { "id": "CWE-1004", "url": "https://cwe.mitre.org/data/definitions/1004.html", "description": "Sensitive Cookie Without HttpOnly Flag" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "cookies\\.set\\s*\\([^)]+\\)(?![^;]*httpOnly|[^;]*secure)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["httpOnly\\s*:\\s*true", "secure\\s*:\\s*true"],
+      "requiresTaint": false
+    }
+  ]
+}

@@ -1,0 +1,348 @@
+{
+  "version": 2,
+  "language": "java",
+  "rules": [
+    {
+      "ruleId": "sql-injection",
+      "severity": "critical",
+      "message": "Potential SQL injection via string concatenation",
+      "detail": "Building SQL queries with user input allows SQL injection. Use PreparedStatement with parameterised queries.",
+      "cves": [
+        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:Statement|createStatement).*execute(?:Query|Update)?\\s*\\([^)]*\\+", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\"\\s*(?:SELECT|INSERT|UPDATE|DELETE|FROM|WHERE).*\"\\s*\\+", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "entityManager\\.createQuery\\s*\\([^)]*\\+", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "session\\.createQuery\\s*\\([^)]*\\+", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["PreparedStatement", "prepareStatement", "setString\\(", "setInt\\(", "@Param", "NamedQuery"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "xxe-injection",
+      "severity": "critical",
+      "message": "Potential XXE via unsafe XML parser configuration",
+      "detail": "Java XML parsers enable external entity processing by default. Disable it explicitly to prevent XXE attacks.",
+      "cves": [
+        { "id": "CWE-611", "url": "https://cwe.mitre.org/data/definitions/611.html", "description": "XML External Entity Reference" },
+        { "id": "CVE-2021-44228", "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228", "description": "Log4Shell - XXE/JNDI injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "DocumentBuilderFactory\\.newInstance\\s*\\(\\s*\\)", "flags": "gi", "context": "multiline", "windowLines": 5 },
+        { "type": "regex", "match": "SAXParserFactory\\.newInstance\\s*\\(\\s*\\)", "flags": "gi", "context": "multiline", "windowLines": 5 },
+        { "type": "regex", "match": "XMLInputFactory\\.newInstance\\s*\\(\\s*\\)", "flags": "gi", "context": "multiline", "windowLines": 5 },
+        { "type": "regex", "match": "TransformerFactory\\.newInstance\\s*\\(\\s*\\)", "flags": "gi", "context": "multiline", "windowLines": 5 }
+      ],
+      "safeguards": ["setFeature.*http://xml.org/sax/features/external-general-entities.*false", "setFeature.*disallow-doctype-decl.*true", "XMLConstants.FEATURE_SECURE_PROCESSING"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "deserialization",
+      "severity": "critical",
+      "message": "Unsafe Java deserialization of untrusted data",
+      "detail": "ObjectInputStream.readObject() on untrusted data allows remote code execution. Use a safe format like JSON or validate with a whitelist deserializer.",
+      "cves": [
+        { "id": "CWE-502", "url": "https://cwe.mitre.org/data/definitions/502.html", "description": "Deserialization of Untrusted Data" },
+        { "id": "CVE-2015-4852", "url": "https://nvd.nist.gov/vuln/detail/CVE-2015-4852", "description": "Apache Commons Collections RCE via deserialization" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "new\\s+ObjectInputStream\\s*\\(", "flags": "gi", "context": "multiline", "windowLines": 3 },
+        { "type": "regex", "match": "\\.readObject\\s*\\(\\s*\\)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "XMLDecoder.*readObject", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["ValidatingObjectInputStream", "SerialKiller", "ObjectInputFilter"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "command-injection",
+      "severity": "critical",
+      "message": "Command injection: user input passed to Runtime.exec or ProcessBuilder",
+      "detail": "Executing OS commands with user-supplied data allows arbitrary command execution.",
+      "cves": [
+        { "id": "CWE-78", "url": "https://cwe.mitre.org/data/definitions/78.html", "description": "OS Command Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Runtime\\.getRuntime\\(\\)\\.exec\\s*\\([^)]*\\+", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "new\\s+ProcessBuilder\\s*\\([^)]*\\+", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "new\\s+ProcessBuilder\\s*\\(.*(?:request\\.|getParameter)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["ProcessBuilder.*new ArrayList", "Arrays\\.asList"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "path-traversal",
+      "severity": "critical",
+      "message": "Path traversal: user input used in file operation",
+      "detail": "User-controlled file paths can escape the intended directory. Canonicalize and validate paths.",
+      "cves": [
+        { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "new\\s+File\\s*\\([^)]*(?:getParameter|request\\.|getPathInfo)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "Paths\\.get\\s*\\([^)]*(?:getParameter|request\\.|getPathInfo)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "new\\s+FileInputStream\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["getCanonicalPath", "normalize\\(\\)", "startsWith\\(basePath"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "ssrf",
+      "severity": "critical",
+      "message": "SSRF: user-controlled URL passed to HTTP client",
+      "detail": "Making HTTP requests to user-supplied URLs exposes internal services.",
+      "cves": [
+        { "id": "CWE-918", "url": "https://cwe.mitre.org/data/definitions/918.html", "description": "Server-Side Request Forgery" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "new\\s+URL\\s*\\([^)]*(?:getParameter|request\\.|getPathInfo)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "HttpClient.*execute\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "RestTemplate.*(?:getForObject|postForObject).*(?:getParameter|request\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["allowedHosts", "allowedDomains", "whitelist"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "hardcoded-secret",
+      "severity": "critical",
+      "message": "Hardcoded secret or credential detected",
+      "detail": "Credentials hardcoded in source code can be extracted from the repository.",
+      "cves": [
+        { "id": "CWE-798", "url": "https://cwe.mitre.org/data/definitions/798.html", "description": "Use of Hard-coded Credentials" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:password|secret|apiKey|api_key|token|privateKey)\\s*=\\s*\"[^\"]{9,}\"", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "String\\s+(?:password|secret|apiKey)\\s*=\\s*\"[^\"]{9,}\"", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["System\\.getenv", "System\\.getProperty", "config\\.", "properties\\.get", "your_", "example", "placeholder"],
+      "requiresTaint": false,
+      "entropyCheck": { "minLength": 9, "minEntropy": 2.5 }
+    },
+    {
+      "ruleId": "weak-hash",
+      "severity": "warning",
+      "message": "Weak hash algorithm: MD5 or SHA-1",
+      "detail": "MD5 and SHA-1 are cryptographically broken. Use SHA-256 or SHA-3.",
+      "cves": [
+        { "id": "CWE-327", "url": "https://cwe.mitre.org/data/definitions/327.html", "description": "Use of a Broken or Risky Cryptographic Algorithm" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "MessageDigest\\.getInstance\\s*\\(\\s*\"(?:MD5|SHA-1|SHA1)\"", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "xss",
+      "severity": "warning",
+      "message": "Potential XSS: user input written directly to response",
+      "detail": "Writing user input directly to HttpServletResponse allows XSS. Encode with OWASP Java Encoder.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "response\\.getWriter\\(\\)\\.(?:print|println|write)\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "out\\.(?:print|println)\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["Encode\\.forHtml", "escapeHtml", "HtmlUtils\\.htmlEscape", "StringEscapeUtils"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "jndi-injection",
+      "severity": "critical",
+      "message": "JNDI lookup with user-controlled name (Log4Shell pattern)",
+      "detail": "Passing user input to JNDI lookup can trigger RCE. This is the Log4Shell pattern. Never allow user input in JNDI names.",
+      "cves": [
+        { "id": "CVE-2021-44228", "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-44228", "description": "Log4Shell JNDI injection RCE" },
+        { "id": "CWE-917", "url": "https://cwe.mitre.org/data/definitions/917.html", "description": "Improper Neutralization of Special Elements in Expression Language Statement" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "InitialContext.*lookup\\s*\\([^)]*(?:request\\.|getParameter)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "context\\.lookup\\s*\\([^)]*(?:request\\.|getParameter)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "open-redirect",
+      "severity": "warning",
+      "message": "Potential open redirect via user-controlled URL",
+      "detail": "Redirecting to user input without validation enables phishing attacks.",
+      "cves": [
+        { "id": "CWE-601", "url": "https://cwe.mitre.org/data/definitions/601.html", "description": "URL Redirection to Untrusted Site" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "response\\.sendRedirect\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["allowedUrls", "whitelist", "isValid"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "weak-cipher",
+      "severity": "warning",
+      "message": "Weak cipher: DES, 3DES, or RC4",
+      "detail": "DES, 3DES, and RC4 are insecure. Use AES-256-GCM.",
+      "cves": [
+        { "id": "CWE-327", "url": "https://cwe.mitre.org/data/definitions/327.html", "description": "Use of a Broken or Risky Cryptographic Algorithm" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Cipher\\.getInstance\\s*\\(\\s*\"(?:DES|DESede|RC4|RC2|Blowfish)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "tls-verify-disabled",
+      "severity": "critical",
+      "message": "TLS certificate verification disabled",
+      "detail": "Trusting all certificates enables MITM attacks.",
+      "cves": [
+        { "id": "CWE-295", "url": "https://cwe.mitre.org/data/definitions/295.html", "description": "Improper Certificate Validation" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "TrustAllCerts|ALLOW_ALL_HOSTNAME_VERIFIER|HttpsURLConnection\\.setDefaultHostnameVerifier", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "getAcceptedIssuers.*return.*new.*\\[\\s*\\]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "checkClientTrusted.*\\{\\s*\\}", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "insecure-cookie",
+      "severity": "warning",
+      "message": "Cookie set without HttpOnly or Secure flag",
+      "detail": "Java Servlet cookies without setHttpOnly(true) can be stolen via XSS. Without setSecure(true) they travel over HTTP. Set both flags on all session cookies.",
+      "cves": [
+        { "id": "CWE-614", "url": "https://cwe.mitre.org/data/definitions/614.html", "description": "Sensitive Cookie Without Secure Attribute" },
+        { "id": "CWE-1004", "url": "https://cwe.mitre.org/data/definitions/1004.html", "description": "Sensitive Cookie Without HttpOnly Flag" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "new\\s+Cookie\\s*\\(", "flags": "gi", "context": "multiline", "windowLines": 4 },
+        { "type": "regex", "match": "\\.addCookie\\s*\\(", "flags": "gi", "context": "multiline", "windowLines": 4 }
+      ],
+      "safeguards": ["setHttpOnly\\s*\\(\\s*true", "setSecure\\s*\\(\\s*true"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "crlf-injection",
+      "severity": "critical",
+      "message": "Potential CRLF / header injection",
+      "detail": "Writing user input into HTTP response headers allows response splitting. Sanitise all values before calling setHeader.",
+      "cves": [
+        { "id": "CWE-113", "url": "https://cwe.mitre.org/data/definitions/113.html", "description": "Improper Neutralization of CRLF Sequences in HTTP Headers" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:response|res)\\.(?:setHeader|addHeader)\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:response|res)\\.(?:setHeader|addHeader)\\s*\\([^)]*\\+", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["replace.*\\\\r|replace.*\\\\n", "StringEscapeUtils", "encodeURL\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "log-injection",
+      "severity": "warning",
+      "message": "Log injection: user input written to logs without sanitisation",
+      "detail": "Logging user input without sanitisation allows log forging. Replace newlines before logging.",
+      "cves": [
+        { "id": "CWE-117", "url": "https://cwe.mitre.org/data/definitions/117.html", "description": "Improper Output Neutralization for Logs" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:log|logger|LOG)\\.(?:info|warn|error|debug|trace)\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:log|logger|LOG)\\.(?:info|warn|error|debug)\\s*\\([^)]*\\+[^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["replace.*\\\\n", "replace.*\\\\r", "StringEscapeUtils"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "ecb-mode",
+      "severity": "warning",
+      "message": "ECB cipher mode is insecure",
+      "detail": "AES/ECB leaks data patterns because identical plaintext blocks produce identical ciphertext. Use AES/GCM/NoPadding instead.",
+      "cves": [
+        { "id": "CWE-327", "url": "https://cwe.mitre.org/data/definitions/327.html", "description": "Use of a Broken or Risky Cryptographic Algorithm" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Cipher\\.getInstance\\s*\\(\\s*\"AES(?:/ECB|/ECB/[^\"]+)\"", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "Cipher\\.getInstance\\s*\\(\\s*\"AES\"\\s*\\)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["GCM", "CBC", "CTR"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "hardcoded-iv",
+      "severity": "warning",
+      "message": "Hardcoded or zero IV used in encryption",
+      "detail": "Static IVs defeat semantic security. Generate a fresh random IV for each encryption with SecureRandom.",
+      "cves": [
+        { "id": "CWE-329", "url": "https://cwe.mitre.org/data/definitions/329.html", "description": "Not Using an Unpredictable IV with CBC Mode" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "new\\s+IvParameterSpec\\s*\\(\\s*new\\s+byte\\[\\d+\\]\\s*\\)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "IvParameterSpec\\s*\\(\\s*\"[^\"]{8,}\"\\.getBytes", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["SecureRandom\\(\\)", "nextBytes\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "ldap-injection",
+      "severity": "critical",
+      "message": "Potential LDAP injection via user-controlled input",
+      "detail": "Building LDAP search filters with user input allows authentication bypass. Use JNDI parameterised queries or escape with LdapEncoder.",
+      "cves": [
+        { "id": "CWE-90", "url": "https://cwe.mitre.org/data/definitions/90.html", "description": "Improper Neutralization of Special Elements in LDAP Query" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:DirContext|LdapContext|InitialDirContext).*search\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "searchFilter.*\\+.*(?:getParameter|request\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["LdapEncoder\\.filterEncode\\(", "escapeLDAPSearchFilter\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "xpath-injection",
+      "severity": "critical",
+      "message": "Potential XPath injection via user-controlled input",
+      "detail": "Building XPath expressions with user input allows unauthorised data access. Use parameterised XPath via XPathVariableResolver.",
+      "cves": [
+        { "id": "CWE-643", "url": "https://cwe.mitre.org/data/definitions/643.html", "description": "Improper Neutralization of Data within XPath Expressions" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "xpath\\.evaluate\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:xpathExpr|xpathQuery).*\\+.*(?:getParameter|request\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["XPathVariableResolver", "escapeXPath\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "el-injection",
+      "severity": "critical",
+      "message": "Expression Language (EL) injection via user-controlled input",
+      "detail": "Evaluating user-controlled strings as EL expressions allows RCE. Never pass user input to ExpressionFactory.createValueExpression.",
+      "cves": [
+        { "id": "CWE-917", "url": "https://cwe.mitre.org/data/definitions/917.html", "description": "Improper Neutralization of Special Elements in Expression Language Statement" },
+        { "id": "CVE-2011-2730", "url": "https://nvd.nist.gov/vuln/detail/CVE-2011-2730", "description": "Spring EL injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "ExpressionFactory.*createValueExpression\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "SpelExpressionParser.*parseExpression\\s*\\([^)]*(?:getParameter|request\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["SimpleEvaluationContext", "TemplateParserContext"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "weak-key-size",
+      "severity": "warning",
+      "message": "RSA/DSA key size below 2048 bits",
+      "detail": "Keys under 2048 bits are insecure. Use at least 2048 bits for RSA/DSA.",
+      "cves": [
+        { "id": "CWE-326", "url": "https://cwe.mitre.org/data/definitions/326.html", "description": "Inadequate Encryption Strength" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "KeyPairGenerator.*initialize\\s*\\(\\s*(?:512|768|1024)\\b", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "initialize\\s*\\(\\s*(?:512|768|1024)\\s*[,)]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["2048", "3072", "4096"],
+      "requiresTaint": false
+    }
+  ]
+}

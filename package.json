@@ -19,15 +19,23 @@
     "commands": [
       {
         "command": "pasteguard.openPanel",
-        "title": "PasteGuard: Open panel"
+        "title": "ShieldPrompt: Open panel"
       },
       {
         "command": "pasteguard.resetSuppressions",
-        "title": "PasteGuard: Reset suppressed rules"
+        "title": "ShieldPrompt: Reset suppressed rules"
       },
       {
         "command": "pasteguard.toggleEnabled",
-        "title": "PasteGuard: Toggle on/off"
+        "title": "ShieldPrompt: Toggle on/off"
+      },
+      {
+        "command": "pasteguard.checkRuleUpdates",
+        "title": "ShieldPrompt: Check for rule updates"
+      },
+      {
+        "command": "pasteguard.scanProject",
+        "title": "ShieldPrompt: Scan Project"
       }
     ],
     "configuration": {
@@ -56,6 +64,16 @@
           },
           "default": [],
           "description": "List of rule IDs to suppress. Static rules: eval-external, hardcoded-secret, sql-concat, shell-injection, pickle-loads, weak-hash-md5, weak-hash-sha1, cors-wildcard, math-random-crypto, inner-html, prototype-pollution, open-redirect. Semantic rules: path-traversal, ssrf, jwt-no-verify, insecure-random-token, redos, command-injection, tls-verify-disabled, timing-attack, xxe-injection, weak-key-size, regex-injection"
+        },
+        "pasteguard.aiFixApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Anthropic API key for AI Fix Suggestions. Leave empty to have the fix prompt copied to clipboard instead (works with any AI assistant)."
+        },
+        "pasteguard.aiFixModel": {
+          "type": "string",
+          "default": "claude-haiku-4-5-20251001",
+          "description": "Anthropic model used for AI Fix Suggestions. claude-haiku-4-5-20251001 is fast and cheap. Use claude-sonnet-4-6 for deeper analysis."
         }
       }
     }

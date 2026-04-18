@@ -1,0 +1,157 @@
+{
+  "updated": "2026-04-17",
+  "frameworksUrl": "https://al3x1s180.github.io/shield-prompt/rules/frameworks",
+  "frameworks": {
+    "nextjs": {
+      "version": 3,
+      "detectionDeps": [
+        "next"
+      ],
+      "detectionImports": [
+        "next/",
+        "next-auth",
+        "\"use server\"",
+        "'use server'"
+      ]
+    },
+    "react": {
+      "version": 1,
+      "detectionDeps": [
+        "react",
+        "react-dom"
+      ],
+      "detectionImports": [
+        "from 'react'",
+        "from \"react\"",
+        "require('react')"
+      ]
+    },
+    "vue": {
+      "version": 1,
+      "detectionDeps": [
+        "vue",
+        "@vue/"
+      ],
+      "detectionImports": [
+        "from 'vue'",
+        "from \"vue\"",
+        "createApp",
+        "defineComponent"
+      ]
+    },
+    "svelte": {
+      "version": 2,
+      "detectionDeps": [
+        "svelte",
+        "@sveltejs/"
+      ],
+      "detectionImports": [
+        "from 'svelte'",
+        "SvelteComponent",
+        "$:"
+      ]
+    },
+    "express": {
+      "version": 3,
+      "detectionDeps": [
+        "express"
+      ],
+      "detectionImports": [
+        "require('express')",
+        "from 'express'",
+        "express()"
+      ]
+    },
+    "fastify": {
+      "version": 2,
+      "detectionDeps": [
+        "fastify",
+        "@fastify/"
+      ],
+      "detectionImports": [
+        "require('fastify')",
+        "from 'fastify'",
+        "Fastify()"
+      ]
+    },
+    "fastapi": {
+      "version": 2,
+      "detectionDeps": [
+        "fastapi"
+      ],
+      "detectionImports": [
+        "from fastapi",
+        "import fastapi",
+        "FastAPI()"
+      ]
+    },
+    "flask": {
+      "version": 2,
+      "detectionDeps": [
+        "flask"
+      ],
+      "detectionImports": [
+        "from flask",
+        "import flask",
+        "Flask(__name__)"
+      ]
+    },
+    "django": {
+      "version": 1,
+      "detectionDeps": [
+        "django"
+      ],
+      "detectionImports": [
+        "from django",
+        "import django",
+        "django."
+      ]
+    },
+    "prisma": {
+      "version": 1,
+      "detectionDeps": [
+        "@prisma/client",
+        "prisma"
+      ],
+      "detectionImports": [
+        "PrismaClient",
+        "from '@prisma/client'"
+      ]
+    },
+    "supabase": {
+      "version": 1,
+      "detectionDeps": [
+        "@supabase/supabase-js",
+        "@supabase/"
+      ],
+      "detectionImports": [
+        "createClient",
+        "from '@supabase/",
+        "supabase"
+      ]
+    },
+    "sqlalchemy": {
+      "version": 1,
+      "detectionDeps": [
+        "sqlalchemy",
+        "flask-sqlalchemy"
+      ],
+      "detectionImports": [
+        "from sqlalchemy",
+        "import sqlalchemy",
+        "SQLAlchemy("
+      ]
+    },
+    "drizzle": {
+      "version": 1,
+      "detectionDeps": [
+        "drizzle-orm"
+      ],
+      "detectionImports": [
+        "from 'drizzle-orm'",
+        "from \"drizzle-orm\"",
+        "drizzle("
+      ]
+    }
+  }
+}

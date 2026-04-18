@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "framework": "vue",
+  "language": "javascript",
+  "rules": [
+    {
+      "ruleId": "vue-v-html-xss",
+      "severity": "critical",
+      "message": "v-html directive with user-controlled data enables XSS",
+      "detail": "Vue's v-html renders raw HTML, bypassing template escaping. Never bind user input, API responses, or route params to v-html. Sanitise with DOMPurify first.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "v-html\\s*=\\s*['\"`][^'\"` ]+['\"`]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "v-html\\s*=\\s*\"[^\"]+\"", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["DOMPurify\\.sanitize\\(", "sanitizeHtml\\(", "xss\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "vue-template-injection",
+      "severity": "critical",
+      "message": "Vue template compiled from user-controlled string",
+      "detail": "Compiling Vue templates from user input (Vue.compile or new Function) allows template injection and RCE. Never use user data as a template string.",
+      "cves": [
+        { "id": "CWE-94", "url": "https://cwe.mitre.org/data/definitions/94.html", "description": "Improper Control of Generation of Code" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Vue\\.compile\\s*\\([^)]*(?:props\\.|data\\.|this\\.$|\\$route\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "compileToFunction\\s*\\([^)]*(?:props\\.|data\\.|\\$route\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "vue-route-query-open-redirect",
+      "severity": "warning",
+      "message": "Vue Router redirect using query param without validation",
+      "detail": "Using $route.query.redirect or similar for navigation without validating the URL allows open redirect attacks. Ensure the redirect target is a relative path or allowlisted domain.",
+      "cves": [
+        { "id": "CWE-601", "url": "https://cwe.mitre.org/data/definitions/601.html", "description": "URL Redirection to Untrusted Site" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\$router\\.(?:push|replace)\\s*\\([^)]*\\$route\\.query", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "router\\.(?:push|replace)\\s*\\([^)]*route\\.query", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["startsWith\\s*\\('/'\\)", "isRelative\\(", "allowedRoutes", "ALLOWED_PATHS"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "vue-event-handler-injection",
+      "severity": "warning",
+      "message": "Dynamic event handler bound from user-controlled data",
+      "detail": "Binding event handlers dynamically from route params or API data allows attackers to trigger arbitrary Vue methods. Use a whitelist of permitted handler names.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "@\\[.*\\$route\\.|v-on:\\[.*\\$route\\.", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["allowedEvents", "whitelist", "ALLOWED_HANDLERS"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "vue-localstorage-token",
+      "severity": "warning",
+      "message": "Auth token stored in localStorage in Vue component",
+      "detail": "Storing tokens in localStorage exposes them to XSS. Use HttpOnly cookies managed server-side for auth tokens.",
+      "cves": [
+        { "id": "CWE-922", "url": "https://cwe.mitre.org/data/definitions/922.html", "description": "Insecure Storage of Sensitive Information" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "localStorage\\.setItem\\s*\\([^)]*(?:token|jwt|auth|session|credential)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["httpOnly", "secure\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "vue-href-javascript",
+      "severity": "critical",
+      "message": ":href bound to user-controlled data — javascript: URI XSS risk",
+      "detail": "Dynamically binding href from user data allows javascript: URI injection. Validate URLs and enforce https/http scheme.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": ":href\\s*=\\s*['\"`](?!https?|/)\\w", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "v-bind:href\\s*=\\s*['\"`](?:url|link|href|redirect|target)['\"`]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["validateUrl\\(", "sanitizeUrl\\(", "startsWith\\('http"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "vue-pinia-sensitive-state",
+      "severity": "warning",
+      "message": "Sensitive data stored in Pinia/Vuex store exposed to devtools",
+      "detail": "Pinia and Vuex stores are fully visible in Vue DevTools. Never store passwords, full tokens, or private keys in store state. Store only what is needed for UI.",
+      "cves": [
+        { "id": "CWE-200", "url": "https://cwe.mitre.org/data/definitions/200.html", "description": "Exposure of Sensitive Information" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:state|defineStore)\\s*[:(].*(?:password|privateKey|secret|fullToken)\\s*:", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["masked\\(", "encrypted\\(", "hash\\("],
+      "requiresTaint": false
+    }
+  ]
+}

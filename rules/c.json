@@ -1,0 +1,274 @@
+{
+  "version": 2,
+  "language": "c",
+  "rules": [
+    {
+      "ruleId": "buffer-overflow-strcpy",
+      "severity": "critical",
+      "message": "Unsafe strcpy/strcat — potential buffer overflow",
+      "detail": "strcpy and strcat do not check destination buffer size, enabling buffer overflows. Use strncpy/strncat with explicit size limits, or snprintf.",
+      "cves": [
+        { "id": "CWE-120", "url": "https://cwe.mitre.org/data/definitions/120.html", "description": "Buffer Copy without Checking Size of Input" },
+        { "id": "CVE-2021-3156", "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-3156", "description": "sudo heap overflow via strcpy" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\bstrcpy\\s*\\(", "flags": "g", "context": "line" },
+        { "type": "regex", "match": "\\bstrcat\\s*\\(", "flags": "g", "context": "line" },
+        { "type": "regex", "match": "\\bwcscpy\\s*\\(", "flags": "g", "context": "line" },
+        { "type": "regex", "match": "\\bwcscat\\s*\\(", "flags": "g", "context": "line" }
+      ],
+      "safeguards": ["strncpy\\(", "strncat\\(", "snprintf\\(", "strlcpy\\(", "strlcat\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "buffer-overflow-gets",
+      "severity": "critical",
+      "message": "gets() is unconditionally unsafe — use fgets() instead",
+      "detail": "gets() has no length limit and always enables buffer overflow. It was removed from C11. Use fgets(buf, sizeof(buf), stdin).",
+      "cves": [
+        { "id": "CWE-242", "url": "https://cwe.mitre.org/data/definitions/242.html", "description": "Use of Inherently Dangerous Function" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\bgets\\s*\\(", "flags": "g", "context": "line" }
+      ],
+      "safeguards": ["fgets\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "format-string",
+      "severity": "critical",
+      "message": "Format string vulnerability: user input as format specifier",
+      "detail": "Passing user input directly as the format string to printf/sprintf allows format string attacks. Always use a literal format string: printf(\"%s\", input).",
+      "cves": [
+        { "id": "CWE-134", "url": "https://cwe.mitre.org/data/definitions/134.html", "description": "Use of Externally-Controlled Format String" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\b(?:printf|fprintf|sprintf|syslog)\\s*\\(\\s*(?!\\s*\")", "flags": "g", "context": "line" },
+        { "type": "regex", "match": "\\bprintf\\s*\\(\\s*\\w+\\s*\\)", "flags": "g", "context": "line" }
+      ],
+      "safeguards": ["%s\\b", "%d\\b", "\"%.*\""],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "integer-overflow",
+      "severity": "warning",
+      "message": "Potential integer overflow before allocation",
+      "detail": "Multiplying user-controlled values before malloc can overflow, causing undersized allocation and heap corruption.",
+      "cves": [
+        { "id": "CWE-190", "url": "https://cwe.mitre.org/data/definitions/190.html", "description": "Integer Overflow or Wraparound" },
+        { "id": "CVE-2021-3517", "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-3517", "description": "libxml2 integer overflow before allocation" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "malloc\\s*\\([^)]*\\*[^)]*\\)", "flags": "g", "context": "line" },
+        { "type": "regex", "match": "calloc\\s*\\([^)]*,\\s*[^)]*\\*[^)]*\\)", "flags": "g", "context": "line" }
+      ],
+      "safeguards": ["size_t_check", "overflow_check", "calloc\\(count,\\s*sizeof"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "command-injection",
+      "severity": "critical",
+      "message": "Command injection: user input in system() or popen()",
+      "detail": "Passing user input to system() or popen() allows arbitrary command execution.",
+      "cves": [
+        { "id": "CWE-78", "url": "https://cwe.mitre.org/data/definitions/78.html", "description": "OS Command Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\bsystem\\s*\\([^)]*(?:argv|stdin|fgets|scanf)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\bpopen\\s*\\([^)]*(?:argv|stdin|fgets|scanf)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["execv\\(", "execve\\(", "whitelist"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "use-after-free",
+      "severity": "critical",
+      "message": "Potential use-after-free: pointer used after free()",
+      "detail": "Using memory after it has been freed causes undefined behaviour and can be exploited for code execution. Set pointers to NULL after free.",
+      "cves": [
+        { "id": "CWE-416", "url": "https://cwe.mitre.org/data/definitions/416.html", "description": "Use After Free" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "free\\s*\\(\\s*(\\w+)\\s*\\)\\s*;[^;]*\\b\\1\\b", "flags": "g", "context": "multiline", "windowLines": 3 }
+      ],
+      "safeguards": ["= NULL", "=NULL"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "null-pointer-deref",
+      "severity": "warning",
+      "message": "Potential null pointer dereference before null check",
+      "detail": "Dereferencing a pointer before checking if it is NULL leads to undefined behaviour.",
+      "cves": [
+        { "id": "CWE-476", "url": "https://cwe.mitre.org/data/definitions/476.html", "description": "NULL Pointer Dereference" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "malloc\\s*\\([^)]+\\)\\s*;(?!.*if\\s*\\(.*==\\s*NULL|.*!=\\s*NULL)", "flags": "g", "context": "multiline", "windowLines": 2 }
+      ],
+      "safeguards": ["if\\s*\\(.*==\\s*NULL", "if\\s*\\(!\\s*\\w+"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "path-traversal",
+      "severity": "critical",
+      "message": "Path traversal: user input in file operation",
+      "detail": "User-controlled file paths can traverse the directory. Validate and sanitise paths before use.",
+      "cves": [
+        { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:fopen|open|creat)\\s*\\([^)]*(?:argv|stdin)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["realpath\\(", "basename\\(", "strstr.*\\.\\./"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "hardcoded-secret",
+      "severity": "critical",
+      "message": "Hardcoded secret or credential detected",
+      "detail": "Use environment variables or config files outside the source tree instead of hardcoding credentials.",
+      "cves": [
+        { "id": "CWE-798", "url": "https://cwe.mitre.org/data/definitions/798.html", "description": "Use of Hard-coded Credentials" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "char\\s*\\*?\\s*(?:password|secret|api_key|token)\\s*=\\s*\"[^\"]{9,}\"", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "#define\\s+(?:PASSWORD|SECRET|API_KEY|TOKEN)\\s+\"[^\"]{9,}\"", "flags": "g", "context": "line" }
+      ],
+      "safeguards": ["getenv\\(", "your_", "example", "placeholder"],
+      "requiresTaint": false,
+      "entropyCheck": { "minLength": 9, "minEntropy": 2.5 }
+    },
+    {
+      "ruleId": "weak-rand",
+      "severity": "warning",
+      "message": "rand() used in security-sensitive context",
+      "detail": "rand() is not cryptographically secure. Use /dev/urandom or getrandom() for security-sensitive values.",
+      "cves": [
+        { "id": "CWE-338", "url": "https://cwe.mitre.org/data/definitions/338.html", "description": "Use of Cryptographically Weak PRNG" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\brand\\s*\\(\\s*\\)", "flags": "g", "context": "line" },
+        { "type": "regex", "match": "\\brandom\\s*\\(\\s*\\)", "flags": "g", "context": "line" }
+      ],
+      "safeguards": ["getrandom\\(", "/dev/urandom", "RAND_bytes\\(", "arc4random\\("],
+      "requiresTaint": false,
+      "contextKeywords": ["token", "secret", "key", "nonce", "salt", "password", "session", "auth", "csrf"]
+    },
+    {
+      "ruleId": "log-injection",
+      "severity": "warning",
+      "message": "Log injection: user input written to logs without sanitisation",
+      "detail": "Writing raw user input to logs via syslog or fprintf allows log forging. Strip newlines and carriage returns before logging.",
+      "cves": [
+        { "id": "CWE-117", "url": "https://cwe.mitre.org/data/definitions/117.html", "description": "Improper Output Neutralization for Logs" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "syslog\\s*\\([^,]+,\\s*(?!\"[^%])[^)]*(?:argv|stdin|fgets|input)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "fprintf\\s*\\(\\s*(?:stderr|log_fp)[^)]*(?:argv|stdin|input)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["strstr.*\\\\n", "remove_newlines\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "hardcoded-iv",
+      "severity": "warning",
+      "message": "Hardcoded or zero IV used in encryption",
+      "detail": "Reusing an IV with the same key allows plaintext recovery. Use getrandom() or /dev/urandom to generate a fresh random IV for each encryption.",
+      "cves": [
+        { "id": "CWE-329", "url": "https://cwe.mitre.org/data/definitions/329.html", "description": "Not Using an Unpredictable IV with CBC Mode" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "unsigned\\s+char\\s+(?:iv|nonce)\\[\\d+\\]\\s*=\\s*\\{[0-9,\\s]+\\}", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "memset\\s*\\(\\s*(?:iv|nonce)\\s*,\\s*0\\s*,", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["getrandom\\(", "RAND_bytes\\(", "/dev/urandom", "arc4random_buf\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "ecb-mode",
+      "severity": "warning",
+      "message": "ECB cipher mode is insecure",
+      "detail": "AES in ECB mode leaks data patterns because identical blocks encrypt identically. Use AES-GCM or AES-CBC with a random IV via OpenSSL EVP APIs.",
+      "cves": [
+        { "id": "CWE-327", "url": "https://cwe.mitre.org/data/definitions/327.html", "description": "Use of a Broken or Risky Cryptographic Algorithm" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "EVP_aes_\\d+_ecb\\s*\\(\\s*\\)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "AES_ecb_encrypt\\s*\\(", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["EVP_aes_\\d+_gcm", "EVP_aes_\\d+_cbc", "EVP_aes_\\d+_ctr"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "insecure-cookie",
+      "severity": "warning",
+      "message": "Set-Cookie header missing HttpOnly or Secure flag",
+      "detail": "C HTTP servers setting cookies via printf/fprintf should include HttpOnly and Secure flags. Missing flags allow XSS-based cookie theft and interception over HTTP.",
+      "cves": [
+        { "id": "CWE-614", "url": "https://cwe.mitre.org/data/definitions/614.html", "description": "Sensitive Cookie Without Secure Attribute" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Set-Cookie:(?!.*HttpOnly)(?!.*Secure)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "fprintf.*Set-Cookie.*(?!HttpOnly|Secure)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["HttpOnly", "Secure", "SameSite"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "ldap-injection",
+      "severity": "critical",
+      "message": "Potential LDAP injection via user-controlled input",
+      "detail": "Building LDAP filters with user input allows authentication bypass. Escape special characters before using in LDAP queries.",
+      "cves": [
+        { "id": "CWE-90", "url": "https://cwe.mitre.org/data/definitions/90.html", "description": "Improper Neutralization of Special Elements in LDAP Query" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "ldap_search(?:_s|_ext)?\\s*\\([^)]*(?:argv|stdin|fgets)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["ldap_escape\\(", "escape_filter\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "xpath-injection",
+      "severity": "critical",
+      "message": "Potential XPath injection via user-controlled input",
+      "detail": "Building XPath expressions with user input allows arbitrary data access. Sanitise before use.",
+      "cves": [
+        { "id": "CWE-643", "url": "https://cwe.mitre.org/data/definitions/643.html", "description": "Improper Neutralization of Data within XPath Expressions" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "xmlXPathEval(?:Expression)?\\s*\\([^)]*(?:argv|stdin|fgets|input)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["xmlXPathEscapeString\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "double-free",
+      "severity": "critical",
+      "message": "Potential double-free: pointer freed more than once",
+      "detail": "Freeing a pointer twice causes heap corruption and can be exploited for code execution. Set pointers to NULL immediately after free() and check before freeing.",
+      "cves": [
+        { "id": "CWE-415", "url": "https://cwe.mitre.org/data/definitions/415.html", "description": "Double Free" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "free\\s*\\(\\s*(\\w+)\\s*\\)\\s*;[^;{]*free\\s*\\(\\s*\\1\\s*\\)", "flags": "g", "context": "multiline", "windowLines": 5 }
+      ],
+      "safeguards": ["=\\s*NULL", "= NULL"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "weak-key-size",
+      "severity": "warning",
+      "message": "RSA key size below 2048 bits",
+      "detail": "RSA keys under 2048 bits are insecure. Use at least 2048 bits via RSA_generate_key_ex.",
+      "cves": [
+        { "id": "CWE-326", "url": "https://cwe.mitre.org/data/definitions/326.html", "description": "Inadequate Encryption Strength" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "RSA_generate_key(?:_ex)?\\s*\\([^,]*,\\s*(?:512|768|1024)\\s*[,)]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["2048", "3072", "4096"],
+      "requiresTaint": false
+    }
+  ]
+}

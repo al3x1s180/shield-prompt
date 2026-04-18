@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "framework": "supabase",
+  "language": "typescript",
+  "rules": [
+    {
+      "ruleId": "supabase-rls-bypass",
+      "severity": "critical",
+      "message": "Supabase query using service role key — bypasses Row Level Security",
+      "detail": "The service role key bypasses all RLS policies. Never use it in client-side code or expose it to users. Use the anon key with proper RLS policies for client operations, and the service role only in trusted server-side code.",
+      "cves": [
+        { "id": "CWE-284", "url": "https://cwe.mitre.org/data/definitions/284.html", "description": "Improper Access Control" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "createClient\\s*\\([^)]*SERVICE_ROLE|SUPABASE_SERVICE_ROLE", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "supabase.*service_role", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["server-only", "import.*server", "// server", "API route", "getServerSideProps"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "supabase-anon-key-client",
+      "severity": "warning",
+      "message": "Supabase client created without auth context in server-side code",
+      "detail": "Creating a Supabase client with just the anon key in server code does not apply the authenticated user's RLS policies. Use createServerClient with the user's session cookie to inherit their permissions.",
+      "cves": [
+        { "id": "CWE-284", "url": "https://cwe.mitre.org/data/definitions/284.html", "description": "Improper Access Control" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "createClient\\s*\\(\\s*process\\.env\\.(?:NEXT_PUBLIC_)?SUPABASE_URL\\s*,\\s*process\\.env\\.(?:NEXT_PUBLIC_)?SUPABASE_ANON_KEY\\s*\\)", "flags": "gi", "context": "multiline", "windowLines": 3 }
+      ],
+      "safeguards": ["createServerClient\\(", "createRouteHandlerClient\\(", "createServerComponentClient\\(", "cookies\\(\\)"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "supabase-sql-injection",
+      "severity": "critical",
+      "message": "Supabase rpc() or raw SQL built from user input",
+      "detail": "Building SQL strings for Supabase rpc() calls or using .select() with template literals containing user input allows SQL injection. Use parameterised rpc() arguments or Supabase's query builder methods.",
+      "cves": [
+        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.select\\s*\\(\\s*`[^`]*\\$\\{(?:req\\.|body\\.|params\\.|query\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.rpc\\s*\\([^,]+,\\s*[^)]*\\+[^)]*(?:req\\.|body\\.|params\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["eq\\(", "match\\(", "parameterized", "rpc\\([^,]+,\\s*\\{"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "supabase-no-rls",
+      "severity": "warning",
+      "message": "Supabase table query without filtering by authenticated user",
+      "detail": "Querying Supabase tables without filtering by the authenticated user's ID can expose data belonging to other users if RLS is not enabled on the table. Always add .eq('user_id', session.user.id) or rely on RLS policies.",
+      "cves": [
+        { "id": "CWE-284", "url": "https://cwe.mitre.org/data/definitions/284.html", "description": "Improper Access Control" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "supabase\\.from\\s*\\([^)]+\\)\\.select\\s*\\(", "flags": "gi", "context": "multiline", "windowLines": 3 }
+      ],
+      "safeguards": ["\\.eq\\s*\\(\\s*['\"]user_id", "\\.eq\\s*\\(\\s*['\"]owner_id", "RLS", "row level security", "session\\.user"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "supabase-storage-public-bucket",
+      "severity": "warning",
+      "message": "Supabase Storage bucket created with public access",
+      "detail": "Creating a public storage bucket makes all files accessible to anyone with the URL. Use private buckets and signed URLs for sensitive files.",
+      "cves": [
+        { "id": "CWE-284", "url": "https://cwe.mitre.org/data/definitions/284.html", "description": "Improper Access Control" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "createBucket\\s*\\([^)]*public\\s*:\\s*true", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["public\\s*:\\s*false", "createSignedUrl\\(", "createSignedUploadUrl\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "supabase-unvalidated-upsert",
+      "severity": "warning",
+      "message": "Supabase upsert() with unvalidated request body",
+      "detail": "Spreading the full request body into upsert() allows users to set fields they shouldn't control (e.g. role, is_admin). Validate and allowlist fields before upserting.",
+      "cves": [
+        { "id": "CWE-915", "url": "https://cwe.mitre.org/data/definitions/915.html", "description": "Improperly Controlled Modification of Object Attributes" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.upsert\\s*\\(\\s*(?:req\\.body|body|request\\.body)\\s*\\)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.upsert\\s*\\(\\s*\\{\\s*\\.\\.\\.[^}]*body", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["pick\\(", "omit\\(", "z\\.object\\(", "schema\\.parse\\(", "validate\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "supabase-auth-admin-client",
+      "severity": "critical",
+      "message": "Supabase auth.admin used — ensure this is server-side only",
+      "detail": "supabase.auth.admin methods use the service role and bypass security. If this code runs on the client side or is reachable by users, it creates a critical privilege escalation vulnerability.",
+      "cves": [
+        { "id": "CWE-269", "url": "https://cwe.mitre.org/data/definitions/269.html", "description": "Improper Privilege Management" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "supabase\\.auth\\.admin\\.", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["server-only", "'use server'", "\"use server\"", "getServerSideProps", "API route"],
+      "requiresTaint": false
+    }
+  ]
+}

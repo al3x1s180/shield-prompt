@@ -1,0 +1,309 @@
+{
+  "version": 2,
+  "language": "csharp",
+  "rules": [
+    {
+      "ruleId": "sql-injection",
+      "severity": "critical",
+      "message": "Potential SQL injection via string concatenation",
+      "detail": "Building SQL queries with user input allows injection. Use SqlParameter or an ORM with parameterised queries.",
+      "cves": [
+        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:SqlCommand|OleDbCommand|OdbcCommand)\\s*\\([^)]*\\+", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\"\\s*(?:SELECT|INSERT|UPDATE|DELETE).*\"\\s*\\+\\s*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "CommandText\\s*=.*\".*\"\\s*\\+", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["SqlParameter", "@\\w+", "AddWithValue", "Parameters\\.Add", "parameterized"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "xxe-injection",
+      "severity": "critical",
+      "message": "Potential XXE via unsafe XmlReader/XmlDocument configuration",
+      "detail": "XmlDocument and XmlReader may process external entities by default depending on .NET version. Disable DTD processing explicitly.",
+      "cves": [
+        { "id": "CWE-611", "url": "https://cwe.mitre.org/data/definitions/611.html", "description": "XML External Entity Reference" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "new\\s+XmlDocument\\s*\\(\\s*\\)", "flags": "gi", "context": "multiline", "windowLines": 5 },
+        { "type": "regex", "match": "XmlReader\\.Create\\s*\\([^)]*\\)", "flags": "gi", "context": "multiline", "windowLines": 3 }
+      ],
+      "safeguards": ["DtdProcessing\\.Prohibit", "DtdProcessing\\.Ignore", "ProhibitDtd\\s*=\\s*true"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "deserialization",
+      "severity": "critical",
+      "message": "Unsafe .NET deserialization",
+      "detail": "BinaryFormatter and NetDataContractSerializer are dangerous with untrusted data. Use System.Text.Json or DataContractJsonSerializer with known types.",
+      "cves": [
+        { "id": "CWE-502", "url": "https://cwe.mitre.org/data/definitions/502.html", "description": "Deserialization of Untrusted Data" },
+        { "id": "CVE-2019-0657", "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-0657", "description": ".NET BinaryFormatter RCE" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "BinaryFormatter.*Deserialize\\s*\\(", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "NetDataContractSerializer.*ReadObject\\s*\\(", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "LosFormatter.*Deserialize\\s*\\(", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "JavaScriptSerializer.*Deserialize\\s*\\(", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["System\\.Text\\.Json", "JsonConvert\\.DeserializeObject<"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "command-injection",
+      "severity": "critical",
+      "message": "Command injection: user input in Process.Start",
+      "detail": "Passing user input to Process.Start allows arbitrary command execution.",
+      "cves": [
+        { "id": "CWE-78", "url": "https://cwe.mitre.org/data/definitions/78.html", "description": "OS Command Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Process\\.Start\\s*\\([^)]*(?:Request\\.|HttpContext\\.|\\+)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "ProcessStartInfo.*FileName.*(?:Request\\.|\\+)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["UseShellExecute\\s*=\\s*false"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "path-traversal",
+      "severity": "critical",
+      "message": "Path traversal: user input in file operation",
+      "detail": "User-controlled paths can escape the intended directory. Validate with Path.GetFullPath and check the result starts with the base directory.",
+      "cves": [
+        { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:File\\.(?:Open|Read|Write)|new\\s+FileStream)\\s*\\([^)]*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "Path\\.Combine\\s*\\([^)]*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["Path\\.GetFullPath", "Path\\.GetFileName", "StartsWith\\(basePath"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "hardcoded-secret",
+      "severity": "critical",
+      "message": "Hardcoded secret or credential detected",
+      "detail": "Credentials should be stored in environment variables or Azure Key Vault, not in source code.",
+      "cves": [
+        { "id": "CWE-798", "url": "https://cwe.mitre.org/data/definitions/798.html", "description": "Use of Hard-coded Credentials" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:password|secret|apiKey|connectionString|token)\\s*=\\s*\"[^\"]{9,}\"", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "string\\s+(?:password|secret|apiKey)\\s*=\\s*\"[^\"]{9,}\"", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["Environment\\.GetEnvironmentVariable", "Configuration\\[", "KeyVault", "your_", "example"],
+      "requiresTaint": false,
+      "entropyCheck": { "minLength": 9, "minEntropy": 2.5 }
+    },
+    {
+      "ruleId": "weak-hash",
+      "severity": "warning",
+      "message": "Weak hash algorithm: MD5 or SHA-1",
+      "detail": "MD5 and SHA-1 are broken. Use SHA-256 or SHA-3.",
+      "cves": [
+        { "id": "CWE-327", "url": "https://cwe.mitre.org/data/definitions/327.html", "description": "Use of a Broken or Risky Cryptographic Algorithm" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:MD5|SHA1)\\.Create\\s*\\(\\s*\\)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "HashAlgorithm\\.Create\\s*\\(\\s*\"(?:MD5|SHA1|SHA-1)\"", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "xss",
+      "severity": "warning",
+      "message": "Potential XSS: unencoded user input in response",
+      "detail": "Writing raw user input to the response allows XSS. Use HtmlEncoder.Default.Encode() or Razor's automatic encoding.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Response\\.Write\\s*\\([^)]*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "Html\\.Raw\\s*\\([^)]*(?:Request\\.|Model\\.|ViewBag\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["HtmlEncoder\\.Default\\.Encode", "WebUtility\\.HtmlEncode", "HttpUtility\\.HtmlEncode"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "open-redirect",
+      "severity": "warning",
+      "message": "Potential open redirect",
+      "detail": "Redirecting to a URL from user input without validation enables phishing.",
+      "cves": [
+        { "id": "CWE-601", "url": "https://cwe.mitre.org/data/definitions/601.html", "description": "URL Redirection to Untrusted Site" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:Redirect|RedirectPermanent)\\s*\\([^)]*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["Url\\.IsLocalUrl", "allowedUrls", "whitelist"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "tls-verify-disabled",
+      "severity": "critical",
+      "message": "TLS certificate validation disabled",
+      "detail": "Bypassing certificate validation enables MITM attacks.",
+      "cves": [
+        { "id": "CWE-295", "url": "https://cwe.mitre.org/data/definitions/295.html", "description": "Improper Certificate Validation" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "ServerCertificateValidationCallback\\s*=.*=>.*true", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "ServerCertificateCustomValidationCallback.*=>.*true", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "ssrf",
+      "severity": "critical",
+      "message": "SSRF: user-controlled URL in HttpClient request",
+      "detail": "Making HTTP requests to user-supplied URLs exposes internal services.",
+      "cves": [
+        { "id": "CWE-918", "url": "https://cwe.mitre.org/data/definitions/918.html", "description": "Server-Side Request Forgery" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:HttpClient|WebClient|WebRequest).*(?:GetAsync|PostAsync|GetStringAsync|DownloadString).*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["allowedHosts", "allowedDomains", "whitelist"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "insecure-cookie",
+      "severity": "warning",
+      "message": "Cookie set without HttpOnly or Secure flag",
+      "detail": "ASP.NET cookies without HttpOnly can be stolen via XSS. Without Secure they travel over HTTP. Set both in CookieOptions.",
+      "cves": [
+        { "id": "CWE-614", "url": "https://cwe.mitre.org/data/definitions/614.html", "description": "Sensitive Cookie Without Secure Attribute" },
+        { "id": "CWE-1004", "url": "https://cwe.mitre.org/data/definitions/1004.html", "description": "Sensitive Cookie Without HttpOnly Flag" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "new\\s+CookieOptions\\s*\\{(?![^}]*HttpOnly\\s*=\\s*true)", "flags": "gi", "context": "multiline", "windowLines": 5 },
+        { "type": "regex", "match": "Response\\.Cookies\\.Append\\s*\\([^)]+\\)(?!.*HttpOnly|.*Secure)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "HttpCookie.*new\\s+HttpCookie", "flags": "gi", "context": "multiline", "windowLines": 4 }
+      ],
+      "safeguards": ["HttpOnly\\s*=\\s*true", "Secure\\s*=\\s*true", "SameSite"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "crlf-injection",
+      "severity": "critical",
+      "message": "Potential CRLF / header injection",
+      "detail": "Writing user input into HTTP response headers allows response splitting. Sanitise before calling Response.Headers.Add.",
+      "cves": [
+        { "id": "CWE-113", "url": "https://cwe.mitre.org/data/definitions/113.html", "description": "Improper Neutralization of CRLF Sequences in HTTP Headers" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Response\\.Headers\\.(?:Add|Append)\\s*\\([^)]*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "Response\\.AddHeader\\s*\\([^)]*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["Replace.*\\\\r|Replace.*\\\\n", "HtmlEncoder", "WebUtility\\.UrlEncode"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "log-injection",
+      "severity": "warning",
+      "message": "Log injection: user input written to logs without sanitisation",
+      "detail": "Logging raw user input allows log forging. Replace newlines before logging.",
+      "cves": [
+        { "id": "CWE-117", "url": "https://cwe.mitre.org/data/definitions/117.html", "description": "Improper Output Neutralization for Logs" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:_logger|logger|Logger|log|Log)\\.Log(?:Information|Warning|Error|Debug|Critical)\\s*\\([^)]*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["Replace.*\\\\n", "Replace.*\\\\r", "Sanitize\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "ecb-mode",
+      "severity": "warning",
+      "message": "ECB cipher mode is insecure",
+      "detail": "AES in ECB mode leaks data patterns. Use AES-GCM via AesGcm class instead.",
+      "cves": [
+        { "id": "CWE-327", "url": "https://cwe.mitre.org/data/definitions/327.html", "description": "Use of a Broken or Risky Cryptographic Algorithm" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.Mode\\s*=\\s*CipherMode\\.ECB", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["CipherMode\\.CBC", "CipherMode\\.GCM", "AesGcm"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "hardcoded-iv",
+      "severity": "warning",
+      "message": "Hardcoded or zero IV used in encryption",
+      "detail": "Reusing an IV defeats semantic security. Generate a random IV with RNGCryptoServiceProvider for every encryption.",
+      "cves": [
+        { "id": "CWE-329", "url": "https://cwe.mitre.org/data/definitions/329.html", "description": "Not Using an Unpredictable IV with CBC Mode" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.IV\\s*=\\s*new\\s+byte\\[\\d+\\](?!.*RNG|.*Random)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.IV\\s*=\\s*Encoding\\..*\\.GetBytes\\s*\\(\"[^\"]{8,}\"", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["RNGCryptoServiceProvider\\(\\)", "RandomNumberGenerator", "GenerateIV\\(\\)"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "ldap-injection",
+      "severity": "critical",
+      "message": "Potential LDAP injection via user-controlled input",
+      "detail": "Building LDAP filters with user input allows authentication bypass. Escape with Encoder.LdapFilterEncode.",
+      "cves": [
+        { "id": "CWE-90", "url": "https://cwe.mitre.org/data/definitions/90.html", "description": "Improper Neutralization of Special Elements in LDAP Query" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "DirectorySearcher.*Filter.*\\+.*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.Filter\\s*=.*\\+.*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["Encoder\\.LdapFilterEncode\\(", "LdapFilterEncode\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "xpath-injection",
+      "severity": "critical",
+      "message": "Potential XPath injection via user-controlled input",
+      "detail": "Building XPath with user input allows arbitrary data access. Use XPathNavigator with parameterised queries.",
+      "cves": [
+        { "id": "CWE-643", "url": "https://cwe.mitre.org/data/definitions/643.html", "description": "Improper Neutralization of Data within XPath Expressions" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:SelectNodes|SelectSingleNode|Evaluate)\\s*\\([^)]*(?:Request\\.|HttpContext\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:SelectNodes|SelectSingleNode)\\s*\\([^)]*\\+", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["Encoder\\.XPathEncode\\(", "XPathExpression\\.Compile"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "weak-key-size",
+      "severity": "warning",
+      "message": "RSA key size below 2048 bits",
+      "detail": "RSA keys under 2048 bits are insecure. Use at least 2048 bits.",
+      "cves": [
+        { "id": "CWE-326", "url": "https://cwe.mitre.org/data/definitions/326.html", "description": "Inadequate Encryption Strength" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "new\\s+RSACryptoServiceProvider\\s*\\(\\s*(?:512|768|1024)\\s*\\)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "KeySize\\s*=\\s*(?:512|768|1024)\\b", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["2048", "3072", "4096"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "type-name-handling",
+      "severity": "critical",
+      "message": "Newtonsoft.Json TypeNameHandling set to Auto or All — deserialization RCE risk",
+      "detail": "TypeNameHandling.Auto or .All allows attackers to specify the deserialized type, enabling RCE. Use TypeNameHandling.None or a SerializationBinder whitelist.",
+      "cves": [
+        { "id": "CWE-502", "url": "https://cwe.mitre.org/data/definitions/502.html", "description": "Deserialization of Untrusted Data" },
+        { "id": "CVE-2017-9424", "url": "https://nvd.nist.gov/vuln/detail/CVE-2017-9424", "description": "Newtonsoft.Json TypeNameHandling RCE" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "TypeNameHandling\\.(?:Auto|All|Objects|Arrays)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["TypeNameHandling\\.None", "SerializationBinder"],
+      "requiresTaint": false
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "framework": "sqlalchemy",
+  "language": "python",
+  "rules": [
+    {
+      "ruleId": "sqlalchemy-raw-text-injection",
+      "severity": "critical",
+      "message": "SQLAlchemy text() with user-controlled string — SQL injection",
+      "detail": "Passing f-strings or concatenated strings to text() bypasses SQLAlchemy's parameterisation. Use bindparams or pass user values as a separate dict: db.execute(text('WHERE id=:id'), {'id': user_id}).",
+      "cves": [
+        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "text\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "text\\s*\\([^)]*\\+.*(?:request\\.|form\\.|args\\.|body\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "db\\.execute\\s*\\(\\s*f['\"].*(?:SELECT|INSERT|UPDATE|DELETE)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "session\\.execute\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["bindparams\\(", ":param_\\w+", "text\\([^,]+,\\s*\\{", "parameterized"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "sqlalchemy-filter-injection",
+      "severity": "critical",
+      "message": "SQLAlchemy filter() with raw SQL string from user input",
+      "detail": "Passing user input directly to .filter() as a raw SQL string allows injection. Use ORM column expressions like Model.column == value instead of raw strings.",
+      "cves": [
+        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.filter\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.filter\\s*\\(\\s*['\"].*\\+", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.filter\\s*\\(\\s*text\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["==\\s*\\w+\\s*\\)", "bindparams\\(", "literal\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "sqlalchemy-order-by-injection",
+      "severity": "critical",
+      "message": "SQLAlchemy order_by() with user-controlled column name",
+      "detail": "Passing user input directly to order_by() as a string allows SQL injection through column names. Use a whitelist of permitted column names and map to ORM attributes.",
+      "cves": [
+        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.order_by\\s*\\(\\s*(?:request\\.|args\\.|form\\.|body\\.)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.order_by\\s*\\(\\s*text\\s*\\([^)]*(?:request\\.|args\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["ALLOWED_SORT_COLUMNS", "whitelist", "if.*not.*in.*columns"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "sqlalchemy-connection-string-injection",
+      "severity": "critical",
+      "message": "SQLAlchemy connection string built from user-controlled input",
+      "detail": "Building a database connection string from user input allows attackers to redirect connections to arbitrary databases. Connection strings must be fully controlled by server configuration.",
+      "cves": [
+        { "id": "CWE-99", "url": "https://cwe.mitre.org/data/definitions/99.html", "description": "Improper Control of Resource Identifiers" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "create_engine\\s*\\(\\s*f['\"].*\\{(?:request|args|form|body)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "create_engine\\s*\\([^)]*\\+.*(?:request\\.|args\\.|form\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["os\\.environ", "os\\.getenv", "DATABASE_URL"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "sqlalchemy-bulk-no-validate",
+      "severity": "warning",
+      "message": "SQLAlchemy bulk insert with unvalidated data from request",
+      "detail": "Bulk inserting directly from request data without validation can insert attacker-controlled values into sensitive columns. Validate and whitelist fields before bulk operations.",
+      "cves": [
+        { "id": "CWE-20", "url": "https://cwe.mitre.org/data/definitions/20.html", "description": "Improper Input Validation" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:bulk_insert_mappings|bulk_save_objects|insert\\(\\))\\.values\\s*\\([^)]*(?:request\\.|args\\.|form\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["schema\\.load\\(", "validate\\(", "marshmallow", "pydantic"],
+      "requiresTaint": true
+    }
+  ]
+}

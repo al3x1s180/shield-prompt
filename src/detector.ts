@@ -4,6 +4,12 @@ interface ChangeTimestamp {
   time: number;
 }
 
+let suppressCount = 0;
+
+export function suppressNextPaste(): void {
+  suppressCount++;
+}
+
 export type PasteCallback = (
   text: string,
   document: vscode.TextDocument,
@@ -15,6 +21,11 @@ export function onPaste(callback: PasteCallback): vscode.Disposable {
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   const disposable = vscode.workspace.onDidChangeTextDocument((event) => {
+    if (suppressCount > 0) {
+      suppressCount--;
+      return;
+    }
+
     const config = vscode.workspace.getConfiguration("pasteguard");
     const enabled = config.get<boolean>("enabled", true);
     if (!enabled) {

@@ -1,0 +1,337 @@
+{
+  "version": 2,
+  "language": "ruby",
+  "rules": [
+    {
+      "ruleId": "sql-injection",
+      "severity": "critical",
+      "message": "Potential SQL injection via string interpolation",
+      "detail": "Interpolating user input into SQL queries enables injection. Use ActiveRecord parameterised queries with ? or named bindings.",
+      "cves": [
+        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.where\\s*\\(\\s*\"[^\"]*#\\{", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.where\\s*\\(\\s*\"[^\"]*\"\\s*\\+", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "execute\\s*\\(\\s*\"[^\"]*#\\{", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "ActiveRecord::Base\\.connection\\.execute\\s*\\([^)]*#\\{", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["\\.where\\s*\\([^,]+,\\s*[a-zA-Z]", "sanitize_sql", "quoted_id"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "command-injection",
+      "severity": "critical",
+      "message": "Command injection: user input in system call or backticks",
+      "detail": "Interpolating user input into shell commands allows arbitrary execution.",
+      "cves": [
+        { "id": "CWE-78", "url": "https://cwe.mitre.org/data/definitions/78.html", "description": "OS Command Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "`[^`]*#\\{[^}]*params|request", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:system|exec|spawn|Kernel\\.system)\\s*\\([^)]*#\\{", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "IO\\.popen\\s*\\([^)]*#\\{", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "%x\\{[^}]*#\\{", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["Shellwords\\.escape", "shellescape"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "template-injection",
+      "severity": "critical",
+      "message": "Server-side template injection via ERB with user input",
+      "detail": "Rendering user input as an ERB template allows arbitrary Ruby execution.",
+      "cves": [
+        { "id": "CWE-94", "url": "https://cwe.mitre.org/data/definitions/94.html", "description": "Code Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "ERB\\.new\\s*\\([^)]*(?:params|request|cookies)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "Erubi::Engine\\.new\\s*\\([^)]*(?:params|request)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "eval-user-input",
+      "severity": "critical",
+      "message": "Dangerous eval() with user input",
+      "detail": "eval() executes arbitrary Ruby code. Never pass user-controlled data to eval.",
+      "cves": [
+        { "id": "CWE-95", "url": "https://cwe.mitre.org/data/definitions/95.html", "description": "Code Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\beval\\s*\\([^)]*(?:params|request|cookies)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\beval\\s*\\([^)]*#\\{", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "path-traversal",
+      "severity": "critical",
+      "message": "Path traversal: user input in file operation",
+      "detail": "User-controlled paths can escape the intended directory. Use File.expand_path and validate the result.",
+      "cves": [
+        { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "File\\.(?:open|read|write|join)\\s*\\([^)]*(?:params|request)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "send_file\\s*\\([^)]*(?:params|request)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["File\\.expand_path", "File\\.basename", "safe_join"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "hardcoded-secret",
+      "severity": "critical",
+      "message": "Hardcoded secret detected",
+      "detail": "Use ENV[] or Rails credentials instead of hardcoding secrets.",
+      "cves": [
+        { "id": "CWE-798", "url": "https://cwe.mitre.org/data/definitions/798.html", "description": "Use of Hard-coded Credentials" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:password|secret|api_key|token|private_key)\\s*=\\s*['\"][^'\"]{9,}['\"]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "secret_key_base\\s*=\\s*['\"][^'\"]{20,}['\"]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["ENV\\[", "Rails\\.application\\.credentials", "Rails\\.application\\.config", "your_", "example"],
+      "requiresTaint": false,
+      "entropyCheck": { "minLength": 9, "minEntropy": 2.5 }
+    },
+    {
+      "ruleId": "mass-assignment",
+      "severity": "warning",
+      "message": "Potential mass assignment via unfiltered params",
+      "detail": "Using params directly in model creation/update allows attackers to set arbitrary attributes. Use strong parameters with permit().",
+      "cves": [
+        { "id": "CWE-915", "url": "https://cwe.mitre.org/data/definitions/915.html", "description": "Improperly Controlled Modification of Dynamically-Determined Object Attributes" },
+        { "id": "CVE-2012-2661", "url": "https://nvd.nist.gov/vuln/detail/CVE-2012-2661", "description": "Rails mass assignment vulnerability" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.(?:create|update|new|assign_attributes)\\s*\\(\\s*params(?!\\[)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.(?:create|update)!?\\s*\\(\\s*params\\.to_h\\s*\\)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["\\.permit\\s*\\(", "require\\s*\\(.*permit"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "xss",
+      "severity": "warning",
+      "message": "Potential XSS: raw HTML output from user input",
+      "detail": "html_safe and raw() disable Rails auto-escaping. Never use them with user input.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:params|request).*\\.html_safe", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "raw\\s*\\(\\s*(?:params|request)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["sanitize\\(", "html_escape\\(", "ERB::Util\\.html_escape"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "open-redirect",
+      "severity": "warning",
+      "message": "Potential open redirect",
+      "detail": "Redirecting to user input without validation enables phishing.",
+      "cves": [
+        { "id": "CWE-601", "url": "https://cwe.mitre.org/data/definitions/601.html", "description": "URL Redirection to Untrusted Site" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "redirect_to\\s+(?:params|request)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["only_path\\s*:\\s*true", "url_whitelist", "allow_other_host\\s*:\\s*false"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "ssrf",
+      "severity": "critical",
+      "message": "SSRF: user-controlled URL in HTTP request",
+      "detail": "Making HTTP requests to user-supplied URLs exposes internal services.",
+      "cves": [
+        { "id": "CWE-918", "url": "https://cwe.mitre.org/data/definitions/918.html", "description": "Server-Side Request Forgery" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:Net::HTTP|HTTParty|Faraday|open-uri).*(?:params|request)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "URI\\.open\\s*\\([^)]*(?:params|request)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["allowedHosts", "whitelist", "URI\\.parse.*host"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "weak-hash",
+      "severity": "warning",
+      "message": "Weak hash algorithm: MD5 or SHA1",
+      "detail": "MD5 and SHA1 are broken. Use Digest::SHA256 or bcrypt for passwords.",
+      "cves": [
+        { "id": "CWE-327", "url": "https://cwe.mitre.org/data/definitions/327.html", "description": "Use of a Broken or Risky Cryptographic Algorithm" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Digest::(?:MD5|SHA1)\\.(?:hexdigest|digest)\\s*\\(", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "deserialize-marshal",
+      "severity": "critical",
+      "message": "Unsafe Marshal.load deserialization",
+      "detail": "Marshal.load executes arbitrary Ruby code on untrusted data. Use JSON.parse instead.",
+      "cves": [
+        { "id": "CWE-502", "url": "https://cwe.mitre.org/data/definitions/502.html", "description": "Deserialization of Untrusted Data" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Marshal\\.load\\s*\\(", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "Marshal\\.restore\\s*\\(", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": [],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "insecure-cookie",
+      "severity": "warning",
+      "message": "Cookie set without HttpOnly or Secure flag",
+      "detail": "Rails cookies without httponly: true can be stolen via XSS. Without secure: true they travel over HTTP. Always set both.",
+      "cves": [
+        { "id": "CWE-614", "url": "https://cwe.mitre.org/data/definitions/614.html", "description": "Sensitive Cookie Without Secure Attribute" },
+        { "id": "CWE-1004", "url": "https://cwe.mitre.org/data/definitions/1004.html", "description": "Sensitive Cookie Without HttpOnly Flag" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "cookies\\[.*\\]\\s*=\\s*\\{(?![^}]*httponly|[^}]*http_only)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "SESSION_STORE.*cookie_only.*false", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["httponly\\s*:\\s*true", "secure\\s*:\\s*true", "same_site"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "crlf-injection",
+      "severity": "critical",
+      "message": "Potential CRLF / header injection via user-controlled value",
+      "detail": "Setting headers with user input allows response splitting. Sanitise before calling response.set_header.",
+      "cves": [
+        { "id": "CWE-113", "url": "https://cwe.mitre.org/data/definitions/113.html", "description": "Improper Neutralization of CRLF Sequences in HTTP Headers" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "response\\.(?:set_header|headers\\[).*(?:params|request)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "headers\\[.*\\]\\s*=.*(?:params|request)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["gsub.*\\\\r|gsub.*\\\\n", "CGI\\.escape\\(", "URI\\.encode"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "log-injection",
+      "severity": "warning",
+      "message": "Log injection: user input written to logs without sanitisation",
+      "detail": "Logging raw user input allows log forging. Strip newlines before logging.",
+      "cves": [
+        { "id": "CWE-117", "url": "https://cwe.mitre.org/data/definitions/117.html", "description": "Improper Output Neutralization for Logs" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:Rails\\.logger|logger)\\.(?:info|warn|error|debug|fatal)\\s*.*(?:params|request)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["gsub.*\\\\n", "gsub.*\\\\r", "sanitize\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "ecb-mode",
+      "severity": "warning",
+      "message": "ECB cipher mode is insecure",
+      "detail": "AES-ECB leaks data patterns. Use AES-GCM via OpenSSL::Cipher.new('aes-256-gcm').",
+      "cves": [
+        { "id": "CWE-327", "url": "https://cwe.mitre.org/data/definitions/327.html", "description": "Use of a Broken or Risky Cryptographic Algorithm" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "OpenSSL::Cipher\\.new\\s*\\(['\"]aes-\\d+-ecb['\"]\\)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "OpenSSL::Cipher::AES.*ECB", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["gcm", "cbc", "ctr"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "hardcoded-iv",
+      "severity": "warning",
+      "message": "Hardcoded or static IV used in encryption",
+      "detail": "Reusing an IV with the same key allows plaintext recovery. Generate a random IV with OpenSSL::Random.random_bytes(16).",
+      "cves": [
+        { "id": "CWE-329", "url": "https://cwe.mitre.org/data/definitions/329.html", "description": "Not Using an Unpredictable IV with CBC Mode" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "cipher\\.iv\\s*=\\s*['\"][^'\"]{8,}['\"]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "cipher\\.iv\\s*=\\s*\"\\\\x00", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["SecureRandom\\.random_bytes\\(", "OpenSSL::Random\\.random_bytes\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "send-method-injection",
+      "severity": "critical",
+      "message": "Ruby send() with user-controlled method name — method injection",
+      "detail": "Calling send() with user input allows attackers to invoke arbitrary methods including private ones. Use a whitelist of allowed method names.",
+      "cves": [
+        { "id": "CWE-94", "url": "https://cwe.mitre.org/data/definitions/94.html", "description": "Improper Control of Generation of Code" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.send\\s*\\(\\s*(?:params|request|cookies)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.public_send\\s*\\(\\s*(?:params|request|cookies)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["ALLOWED_METHODS", "whitelist", "include\\?"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "constantize-injection",
+      "severity": "critical",
+      "message": "constantize with user input allows arbitrary class instantiation",
+      "detail": "Calling constantize on user input allows attackers to load arbitrary constants or classes. Use a whitelist of permitted class names.",
+      "cves": [
+        { "id": "CWE-94", "url": "https://cwe.mitre.org/data/definitions/94.html", "description": "Improper Control of Generation of Code" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:params|request|cookies).*\\.constantize", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\.constantize\\s*\\(\\s*(?:params|request)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["ALLOWED_CLASSES", "whitelist", "include\\?"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "ldap-injection",
+      "severity": "critical",
+      "message": "Potential LDAP injection via user-controlled input",
+      "detail": "Building LDAP filters with user input allows authentication bypass. Escape with Net::LDAP::Filter.escape.",
+      "cves": [
+        { "id": "CWE-90", "url": "https://cwe.mitre.org/data/definitions/90.html", "description": "Improper Neutralization of Special Elements in LDAP Query" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "Net::LDAP.*(?:search|bind).*(?:params|request)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["Net::LDAP::Filter\\.escape\\(", "escape_filter\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "xpath-injection",
+      "severity": "critical",
+      "message": "Potential XPath injection via user-controlled input",
+      "detail": "Building XPath expressions with user input allows arbitrary data extraction. Sanitise before use.",
+      "cves": [
+        { "id": "CWE-643", "url": "https://cwe.mitre.org/data/definitions/643.html", "description": "Improper Neutralization of Data within XPath Expressions" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.xpath\\s*\\([^)]*(?:params|request)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["escape\\(", "sanitize\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "weak-key-size",
+      "severity": "warning",
+      "message": "RSA key size below 2048 bits",
+      "detail": "Keys under 2048 bits are insecure. Use at least 2048 bits.",
+      "cves": [
+        { "id": "CWE-326", "url": "https://cwe.mitre.org/data/definitions/326.html", "description": "Inadequate Encryption Strength" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "OpenSSL::PKey::RSA\\.new\\s*\\(\\s*(?:512|768|1024)\\s*\\)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["2048", "3072", "4096"],
+      "requiresTaint": false
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "updated": "2026-04-17",
+  "rulesUrl": "https://al3x1s180.github.io/shield-prompt/rules",
+  "languages": {
+    "javascript": 2,
+    "typescript": 2,
+    "python": 2,
+    "java": 2,
+    "csharp": 2,
+    "go": 2,
+    "ruby": 2,
+    "php": 2,
+    "rust": 2,
+    "c": 2
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "version": 2,
+  "framework": "fastapi",
+  "language": "python",
+  "rules": [
+    {
+      "ruleId": "fastapi-no-auth-dependency",
+      "severity": "critical",
+      "message": "FastAPI route missing authentication dependency",
+      "detail": "FastAPI routes without a security dependency (OAuth2PasswordBearer, HTTPBearer, or a custom auth Depends) are publicly accessible. Add Depends(get_current_user) or equivalent to all protected routes.",
+      "cves": [
+        { "id": "CWE-306", "url": "https://cwe.mitre.org/data/definitions/306.html", "description": "Missing Authentication for Critical Function" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "@(?:app|router)\\.(?:post|put|delete|patch)\\s*\\(", "flags": "gi", "context": "multiline", "windowLines": 3 }
+      ],
+      "safeguards": ["Depends\\(", "Security\\(", "get_current_user", "oauth2_scheme", "HTTPBearer", "verify_token", "require_auth", "current_user", "authenticate"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "fastapi-sql-injection",
+      "severity": "critical",
+      "message": "Raw SQL in FastAPI route built from request data",
+      "detail": "Building SQL queries with f-strings or concatenation from FastAPI request parameters allows SQL injection. Use SQLAlchemy ORM or parameterised queries.",
+      "cves": [
+        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:db|session|conn|cursor)\\.execute\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:db|session|conn|cursor)\\.execute\\s*\\([^)]*%\\s*(?:\\w+|\\()", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "text\\s*\\(\\s*f['\"].*SELECT|INSERT|UPDATE|DELETE", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["bindparams\\(", ":param_", "execute\\([^,]+,\\s*\\{", "parameterized"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "fastapi-path-traversal",
+      "severity": "critical",
+      "message": "FastAPI route uses path parameter in file operation without sanitisation",
+      "detail": "Using path parameters or query parameters in file operations without sanitisation allows directory traversal. Use os.path.basename() and validate the resolved path.",
+      "cves": [
+        { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "open\\s*\\([^)]*(?:file_path|filename|path|filepath)\\s*[^)]*\\)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "FileResponse\\s*\\([^)]*(?:file_path|filename|path)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["os\\.path\\.basename\\(", "os\\.path\\.abspath\\(", "send_from_directory\\(", "safe_join\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "fastapi-ssrf",
+      "severity": "critical",
+      "message": "FastAPI route makes HTTP request to user-controlled URL",
+      "detail": "Using query params or body data as a request URL enables SSRF. Validate against an allowlist of permitted hosts.",
+      "cves": [
+        { "id": "CWE-918", "url": "https://cwe.mitre.org/data/definitions/918.html", "description": "Server-Side Request Forgery" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "(?:requests|httpx|aiohttp)\\.(?:get|post|put|delete)\\s*\\([^)]*(?:url|target|endpoint)\\s*[,)]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:requests|httpx)\\.(?:get|post)\\s*\\(\\s*f['\"].*\\{(?:url|target|endpoint)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["ALLOWED_HOSTS", "urlparse.*netloc", "allowed_domains"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "fastapi-unvalidated-body",
+      "severity": "warning",
+      "message": "FastAPI route accepts raw Request instead of Pydantic model",
+      "detail": "Using Request directly to read body bypasses Pydantic validation. Define a Pydantic BaseModel for all request bodies to enforce type safety and input constraints.",
+      "cves": [
+        { "id": "CWE-20", "url": "https://cwe.mitre.org/data/definitions/20.html", "description": "Improper Input Validation" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "async def \\w+\\s*\\(\\s*(?:\\w+\\s*:\\s*)?Request\\s*\\)\\s*:", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["BaseModel", "Pydantic", "\\.model_validate\\(", "validator\\(", "Body\\(", "Form\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "fastapi-command-injection",
+      "severity": "critical",
+      "message": "Shell command built from FastAPI request data",
+      "detail": "Passing query params or body data to subprocess allows command injection. Use subprocess.run() with a list argument and shell=False.",
+      "cves": [
+        { "id": "CWE-78", "url": "https://cwe.mitre.org/data/definitions/78.html", "description": "OS Command Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "subprocess\\.(?:run|call|Popen)\\s*\\(.*shell\\s*=\\s*True", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "os\\.system\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["shell\\s*=\\s*False", "shlex\\.quote\\(", "shlex\\.split\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "fastapi-open-redirect",
+      "severity": "warning",
+      "message": "FastAPI RedirectResponse with user-controlled URL",
+      "detail": "Redirecting to a URL from query params or body without validation enables open redirect. Validate URLs are relative paths or allowlisted domains.",
+      "cves": [
+        { "id": "CWE-601", "url": "https://cwe.mitre.org/data/definitions/601.html", "description": "URL Redirection to Untrusted Site" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "RedirectResponse\\s*\\([^)]*(?:url|redirect|next|target)\\s*[,)]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["startswith\\('/'\\)", "ALLOWED_HOSTS", "is_safe_url\\(", "urlparse"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "fastapi-jwt-no-verify",
+      "severity": "critical",
+      "message": "JWT decoded without signature verification in FastAPI",
+      "detail": "Using jwt.decode() with options={'verify_signature': False} or algorithms=['none'] skips all validation. Always verify with a secret key and explicit algorithms list.",
+      "cves": [
+        { "id": "CWE-347", "url": "https://cwe.mitre.org/data/definitions/347.html", "description": "Improper Verification of Cryptographic Signature" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "jwt\\.decode\\s*\\([^)]*verify_signature.*False", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "jwt\\.decode\\s*\\([^)]*algorithms\\s*=\\s*\\[\\s*['\"]none['\"]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["algorithms=\\[(?!'none')", "SECRET_KEY", "public_key"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "fastapi-cors-wildcard",
+      "severity": "warning",
+      "message": "FastAPI CORS configured with wildcard allow_origins",
+      "detail": "allow_origins=['*'] exposes the API to cross-origin attacks. Restrict to specific trusted origins.",
+      "cves": [
+        { "id": "CWE-942", "url": "https://cwe.mitre.org/data/definitions/942.html", "description": "Permissive Cross-domain Policy" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "CORSMiddleware.*allow_origins\\s*=\\s*\\[\\s*['\"]\\*['\"]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "allow_origins\\s*=\\s*\\[\\s*['\"]\\*['\"]", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["allow_origins\\s*=\\s*\\[(?!.*\\*)", "ALLOWED_ORIGINS"],
+      "requiresTaint": false
+    }
+  ]
+}

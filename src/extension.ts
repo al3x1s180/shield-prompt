@@ -17,7 +17,10 @@ let currentFindings: Finding[] = [];
 let currentFingerprint: AIFingerprint = { isAI: false, confidence: "low" };
 
 export function activate(context: vscode.ExtensionContext): void {
-  panel = new PasteGuardPanel();
+  panel = new PasteGuardPanel((remainingFindings) => {
+    currentFindings = remainingFindings;
+    updateStatusBar(remainingFindings);
+  });
 
   // Status bar
   statusBarItem = vscode.window.createStatusBarItem(

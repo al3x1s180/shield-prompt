@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "framework": "react",
+  "language": "javascript",
+  "rules": [
+    {
+      "ruleId": "react-dangerouslysetinnerhtml",
+      "severity": "critical",
+      "message": "dangerouslySetInnerHTML with user-controlled content enables XSS",
+      "detail": "React's dangerouslySetInnerHTML bypasses all built-in XSS protection. Never pass user input, props, or API data to it without sanitising with DOMPurify first.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "dangerouslySetInnerHTML\\s*=\\s*\\{\\s*\\{\\s*__html\\s*:", "flags": "g", "context": "multiline", "windowLines": 3 },
+        { "type": "regex", "match": "__html\\s*:\\s*(?!.*DOMPurify|.*sanitize)[^}]*(?:props\\.|state\\.|this\\.|data\\.|content|body|html|markup)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["DOMPurify\\.sanitize\\(", "sanitizeHtml\\(", "sanitize\\(", "xss\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "react-href-javascript",
+      "severity": "critical",
+      "message": "href set to user-controlled value — javascript: URI XSS risk",
+      "detail": "Setting an anchor href to user-controlled data allows javascript: URI injection, executing arbitrary scripts when clicked. Validate URLs and block non-http/https schemes.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "href\\s*=\\s*\\{(?!\\s*['\"`]/|\\s*['\"`]https|\\s*['\"`]http)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "href\\s*=\\s*\\{\\s*(?:props\\.|state\\.|this\\.state\\.|data\\.)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["startsWith\\('http'\\)", "startsWith\\('/'\\)", "validateUrl\\(", "isValidUrl\\(", "sanitizeUrl\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "react-ref-innerhtml",
+      "severity": "warning",
+      "message": "DOM ref used to set innerHTML directly",
+      "detail": "Setting innerHTML on a React ref bypasses React's sanitisation. Use textContent for plain text or DOMPurify.sanitize() before assigning HTML.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\.current\\.innerHTML\\s*=", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["DOMPurify\\.sanitize\\(", "textContent", "sanitize\\("],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "react-eval-in-component",
+      "severity": "critical",
+      "message": "eval() or Function() called inside a React component with props/state",
+      "detail": "Calling eval() or new Function() with React props or state allows arbitrary code execution. Use safer alternatives like JSON.parse or a proper expression evaluator.",
+      "cves": [
+        { "id": "CWE-95", "url": "https://cwe.mitre.org/data/definitions/95.html", "description": "Code Injection" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "\\beval\\s*\\([^)]*(?:props\\.|state\\.|this\\.state)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "new\\s+Function\\s*\\([^)]*(?:props\\.|state\\.|this\\.state)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["JSON\\.parse\\(", "mathjs", "expr-eval"],
+      "requiresTaint": true
+    },
+    {
+      "ruleId": "react-localstorage-token",
+      "severity": "warning",
+      "message": "JWT or auth token stored in localStorage",
+      "detail": "Storing JWTs in localStorage exposes them to XSS. Any injected script can read localStorage. Use HttpOnly cookies managed server-side instead.",
+      "cves": [
+        { "id": "CWE-922", "url": "https://cwe.mitre.org/data/definitions/922.html", "description": "Insecure Storage of Sensitive Information" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "localStorage\\.setItem\\s*\\([^)]*(?:token|jwt|auth|session|credential|access_token|refresh_token)", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["httpOnly", "cookie\\(", "secure\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "react-postmessage-no-origin",
+      "severity": "warning",
+      "message": "postMessage handler missing origin check",
+      "detail": "React components listening to window postMessage events must validate event.origin. Without this any page can send messages to your component.",
+      "cves": [
+        { "id": "CWE-345", "url": "https://cwe.mitre.org/data/definitions/345.html", "description": "Insufficient Verification of Data Authenticity" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "useEffect.*addEventListener\\s*\\(\\s*['\"`]message['\"`]", "flags": "gi", "context": "multiline", "windowLines": 8 },
+        { "type": "regex", "match": "window\\.onmessage\\s*=", "flags": "gi", "context": "multiline", "windowLines": 5 }
+      ],
+      "safeguards": ["event\\.origin", "e\\.origin", "allowedOrigins", "ALLOWED_ORIGINS"],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "react-expose-sensitive-prop",
+      "severity": "warning",
+      "message": "Sensitive value passed as a component prop — may appear in React DevTools or logs",
+      "detail": "Passing secrets, tokens, or passwords as props exposes them in React DevTools, error boundaries, and logging tools. Pass only what the component strictly needs.",
+      "cves": [
+        { "id": "CWE-200", "url": "https://cwe.mitre.org/data/definitions/200.html", "description": "Exposure of Sensitive Information" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "<\\w+[^>]*(?:password|secret|apiKey|api_key|token|privateKey)\\s*=\\s*\\{", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["process\\.env\\.NEXT_PUBLIC_", "publicKey", "masked\\("],
+      "requiresTaint": false
+    },
+    {
+      "ruleId": "react-object-injection",
+      "severity": "warning",
+      "message": "Object spread of unvalidated props into DOM element",
+      "detail": "Spreading unvalidated props onto a DOM element (e.g. <div {...props}>) can inject dangerous attributes like onError, onLoad, or style containing expressions. Whitelist allowed props explicitly.",
+      "cves": [
+        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+      ],
+      "patterns": [
+        { "type": "regex", "match": "<(?:div|span|a|img|input|button|form)\\s*\\{\\.\\.\\.(?:props|rest|attrs|attributes)\\s*\\}", "flags": "gi", "context": "line" }
+      ],
+      "safeguards": ["allowedProps", "pick\\(", "omit\\(", "whitelist"],
+      "requiresTaint": false
+    }
+  ]
+}
