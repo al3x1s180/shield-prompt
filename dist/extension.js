@@ -312,7 +312,7 @@ function onPaste(callback) {
   const lastChange = { time: 0 };
   let debounceTimer;
   return vscode.workspace.onDidChangeTextDocument((event) => {
-    const config = vscode.workspace.getConfiguration("pasteguard");
+    const config = vscode.workspace.getConfiguration("shieldprompt");
     if (!config.get("enabled", true)) return;
     if (event.reason === vscode.TextDocumentChangeReason.Undo || event.reason === vscode.TextDocumentChangeReason.Redo) return;
     if (event.document.uri.scheme !== "file" && event.document.uri.scheme !== "untitled") return;
@@ -442,7 +442,7 @@ class ShieldPromptPanel {
             return;
           }
           const languageId   = editor.document.languageId;
-          const config       = vscode.workspace.getConfiguration("pasteguard");
+          const config       = vscode.workspace.getConfiguration("shieldprompt");
           const suppressed   = config.get("suppressedRules", []);
 
           // Strip all shieldprompt-ignore comments from the document before re-scanning
@@ -510,7 +510,7 @@ class ShieldPromptPanel {
       } else if (msg.type === "aiFix") {
         (async () => {
           try {
-            const config  = vscode.workspace.getConfiguration("pasteguard");
+            const config  = vscode.workspace.getConfiguration("shieldprompt");
             const apiKey  = config.get("aiFixApiKey", "").trim();
             const aiModel = config.get("aiFixModel", "claude-haiku-4-5-20251001").trim();
             const findings = this._findings;
@@ -543,7 +543,7 @@ class ShieldPromptPanel {
               // No API key — fall back to opening in the default AI chat via clipboard
               await vscode.env.clipboard.writeText(prompt);
               vscode.window.showInformationMessage("ShieldPrompt: Fix prompt copied to clipboard. Paste it into your AI assistant.", "Open Settings").then(sel => {
-                if (sel === "Open Settings") vscode.commands.executeCommand("workbench.action.openSettings", "pasteguard.aiFixApiKey");
+                if (sel === "Open Settings") vscode.commands.executeCommand("workbench.action.openSettings", "shieldprompt.aiFixApiKey");
               });
               if (this.panel) this.panel.webview.postMessage({ type: "aiFix", text: "No AI API key configured.\n\nThe fix prompt has been copied to your clipboard — paste it into your AI assistant (ChatGPT, Claude, Copilot Chat, etc.).\n\nTo enable automatic AI fixes, add your API key in Settings → ShieldPrompt → AI Fix API Key.", err: true });
               return;
@@ -588,7 +588,7 @@ class ShieldPromptPanel {
           }
         })();
       } else if (msg.type === "openSettings") {
-        vscode.commands.executeCommand("workbench.action.openSettings", "pasteguard.aiFixApiKey");
+        vscode.commands.executeCommand("workbench.action.openSettings", "shieldprompt.aiFixApiKey");
       } else if (msg.type === "ignoreThis") {
         const f = this._findings[msg.findingIndex];
         if (!f) return;
@@ -856,7 +856,7 @@ class ScanPanel {
       return;
     }
     const rootPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
-    const config   = vscode.workspace.getConfiguration("pasteguard");
+    const config   = vscode.workspace.getConfiguration("shieldprompt");
     const suppressedRules = config.get("suppressedRules", []);
 
     this._cancelToken = { cancelled: false };
@@ -1140,7 +1140,7 @@ function activate(context) {
 
   // Status bar
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-  statusBarItem.command = "pasteguard.openPanel";
+  statusBarItem.command = "shieldprompt.openPanel";
   statusBarItem.text    = "$(shield) ShieldPrompt: loading rules\u2026";
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
@@ -1170,21 +1170,21 @@ function activate(context) {
   }
 
   // Commands
-  context.subscriptions.push(vscode.commands.registerCommand("pasteguard.openPanel", () => {
+  context.subscriptions.push(vscode.commands.registerCommand("shieldprompt.openPanel", () => {
     const uri = vscode.window.activeTextEditor?.document?.uri;
     panelInstance.show(currentFindings, currentFingerprint, totalRulesCount, uri);
   }));
-  context.subscriptions.push(vscode.commands.registerCommand("pasteguard.resetSuppressions", () => {
-    vscode.workspace.getConfiguration("pasteguard").update("suppressedRules", [], vscode.ConfigurationTarget.Workspace);
+  context.subscriptions.push(vscode.commands.registerCommand("shieldprompt.resetSuppressions", () => {
+    vscode.workspace.getConfiguration("shieldprompt").update("suppressedRules", [], vscode.ConfigurationTarget.Workspace);
     vscode.window.showInformationMessage("ShieldPrompt: All suppressions reset.");
   }));
-  context.subscriptions.push(vscode.commands.registerCommand("pasteguard.toggleEnabled", () => {
-    const cfg = vscode.workspace.getConfiguration("pasteguard");
+  context.subscriptions.push(vscode.commands.registerCommand("shieldprompt.toggleEnabled", () => {
+    const cfg = vscode.workspace.getConfiguration("shieldprompt");
     const cur = cfg.get("enabled", true);
     cfg.update("enabled", !cur, vscode.ConfigurationTarget.Workspace);
     vscode.window.showInformationMessage("ShieldPrompt: " + (cur ? "Disabled" : "Enabled"));
   }));
-  context.subscriptions.push(vscode.commands.registerCommand("pasteguard.checkRuleUpdates", async () => {
+  context.subscriptions.push(vscode.commands.registerCommand("shieldprompt.checkRuleUpdates", async () => {
     vscode.window.showInformationMessage("ShieldPrompt: Checking for rule updates\u2026");
     await forceRemoteUpdate(context.extensionPath, context.globalState);
     loadedRulesMap     = await loadRules(context.extensionPath, context.globalState);
@@ -1198,7 +1198,7 @@ function activate(context) {
 
   // Paste handler — runs language rules + applicable framework rules
   const pasteDisposable = onPaste((text, document, range) => {
-    const config          = vscode.workspace.getConfiguration("pasteguard");
+    const config          = vscode.workspace.getConfiguration("shieldprompt");
     const suppressedRules = config.get("suppressedRules", []);
     const languageId      = document.languageId;
 
@@ -1303,7 +1303,7 @@ function activate(context) {
     panelInstance.show(merged, fp, totalRulesCount, document.uri);
   });
 
-  context.subscriptions.push(vscode.commands.registerCommand("pasteguard.scanProject", () => {
+  context.subscriptions.push(vscode.commands.registerCommand("shieldprompt.scanProject", () => {
     scanPanelInstance.open();
   }));
 

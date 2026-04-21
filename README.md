@@ -1,48 +1,46 @@
 # ShieldPrompt
 
-**Detects security vulnerabilities in AI-generated code the moment you paste it.**
+**Security analysis for AI-generated code — fires the moment you paste, not while you type.**
 
-ShieldPrompt fires on paste — not on every keystroke. It catches the exact patterns that ChatGPT, Claude, and Copilot produce at high rates and shows you exactly what's wrong inline.
-
----
-
-## Why ShieldPrompt instead of Snyk or SonarLint?
-
-| | ShieldPrompt | Snyk | SonarLint |
-|---|---|---|---|
-| Fires on paste only | ✅ | ❌ scans whole file | ❌ scans on type |
-| Zero auth / login required | ✅ | ❌ requires account | ❌ requires account |
-| Works offline | ✅ | ❌ | Partial |
-| No CLI dependency | ✅ | ❌ requires Snyk CLI | ❌ |
-| AI-generation detection | ✅ | ❌ | ❌ |
-| Tuned for LLM hallucinations | ✅ | ❌ general rules | ❌ general rules |
+Most developers using AI assistants follow the same workflow: ask for code, review it quickly, paste it in. ShieldPrompt fits into that exact moment. The instant you paste, it silently analyses the code, highlights any vulnerable lines directly in the editor, and opens a findings panel explaining what's wrong and how to fix it — all before you've had time to run anything.
 
 ---
 
 ## How it works
 
-1. **Paste** AI-generated code into any file
-2. **ShieldPrompt detects** it was pasted (not typed) and analyses it instantly
-3. **Flagged lines** get highlighted with coloured gutter markers
-4. **The panel** opens showing exactly what's wrong, why it's dangerous, and the CVE if one exists
+ShieldPrompt runs two analysis layers on every paste:
+
+**Static analysis** matches known dangerous patterns on individual lines — fast, zero false positives on exact matches, covers the most common vulnerability classes across JavaScript, TypeScript, Python, and more.
+
+**Semantic analysis** goes further. It builds a taint map across the entire pasted block, tracking user-controlled values as they flow through variable assignments, helper function calls, and into dangerous sinks — even when source and sink are separated by many lines. It also checks for structural problems: auth routes missing rate-limit middleware, upload handlers missing validation, truncated hash values used as identifiers.
+
+Neither layer sends your code anywhere. Everything runs locally inside VS Code.
 
 ---
 
-## Security rules
+## Why this instead of other security tools
 
-ShieldPrompt catches the vulnerability classes that LLMs produce at highest rates:
+Most security linters are designed for CI pipelines and whole-project scans. They require accounts, CLIs, language servers, or external services to work. ShieldPrompt has none of those dependencies — it installs as a single extension with no setup, works offline, and fires only on paste so it never slows your editor while you type.
 
-| Rule | Severity | Languages |
-|---|---|---|
-| `eval()` on dynamic input | Critical | JS, TS |
-| Hardcoded secrets / API keys | Critical | All |
-| SQL injection via string concat | Critical | All |
-| `subprocess` with `shell=True` | Critical | Python |
-| `pickle.loads()` deserialization | Critical | Python |
-| Weak hash: MD5, SHA-1 | Warning | JS, TS, Python |
-| CORS wildcard `*` | Warning | JS, TS |
-| `Math.random()` for crypto | Warning | JS, TS |
-| Unsafe `innerHTML` assignment | Warning | JS, TS |
+It also detects whether pasted code was AI-generated, and labels findings accordingly — useful context when reviewing code from a model you don't fully trust.
+
+---
+
+## Using it
+
+Install the extension. Paste any block of code into a supported file. That's it.
+
+If ShieldPrompt finds issues, a panel opens beside your editor listing each finding with its severity, the affected line, the rule that fired, and a plain-English explanation of the risk and the fix. Clicking a finding expands its detail. CVE and CWE references are clickable links.
+
+The panel has four actions:
+
+**Re-scan File** — runs a full analysis of the entire active file, not just the last paste. Before scanning it strips any existing ignore comments so previously suppressed lines are re-evaluated from scratch. Useful after you've made fixes and want a clean read.
+
+**AI Fix Suggestions** — sends all current findings, along with the relevant lines of code for context, to the Anthropic API and displays fix proposals inline in the panel. If you haven't added an API key under `shieldprompt.aiFixApiKey`, it falls back to copying a ready-made prompt to your clipboard so you can paste it into any AI assistant manually.
+
+**Scan Project** — runs the full rule set against every file in the workspace and shows results grouped by file. Respects `.gitignore`.
+
+**Ignore on this line** — available on each individual finding. Adds a `// shieldprompt-ignore: <rule-id>` comment to that line and removes the gutter marker. The suppression is per-line and per-rule, so it won't hide other findings on the same line. Re-scan File will clear these comments and re-evaluate everything fresh.
 
 ---
 
@@ -50,24 +48,27 @@ ShieldPrompt catches the vulnerability classes that LLMs produce at highest rate
 
 | Setting | Default | Description |
 |---|---|---|
-| `pasteguard.enabled` | `true` | Enable/disable ShieldPrompt |
-| `pasteguard.minLines` | `3` | Minimum pasted lines to trigger analysis |
-| `pasteguard.suppressedRules` | `[]` | Rule IDs to suppress per workspace |
-| `pasteguard.ignoreCompletions` | `false` | Skip Copilot-style injections |
+| `shieldprompt.enabled` | `true` | Enable or disable analysis on paste |
+| `shieldprompt.minLines` | `3` | Minimum pasted lines to trigger analysis |
+| `shieldprompt.suppressedRules` | `[]` | Rule IDs to suppress across the whole workspace |
+| `shieldprompt.aiFixApiKey` | `""` | Anthropic API key for AI Fix Suggestions |
+| `shieldprompt.aiFixModel` | `claude-haiku-4-5-20251001` | Model used for AI Fix Suggestions |
 
 ---
 
 ## Commands
 
-- `ShieldPrompt: Open panel` — Open the findings panel
-- `ShieldPrompt: Reset suppressed rules` — Clear all workspace suppressions
-- `ShieldPrompt: Toggle on/off` — Enable or disable without uninstalling
+- `ShieldPrompt: Open panel` — Reopen the findings panel
+- `ShieldPrompt: Toggle on/off` — Disable temporarily without uninstalling
+- `ShieldPrompt: Reset suppressed rules` — Clear all workspace-level suppressions
+- `ShieldPrompt: Scan Project` — Run analysis across the full project
+- `ShieldPrompt: Check for rule updates` — Pull the latest rule definitions
 
 ---
 
 ## Privacy
 
-All analysis runs entirely locally. Your code never leaves your machine. No telemetry is collected without opt-in.
+All analysis runs locally inside the extension host process. Your code is never transmitted anywhere unless you use AI Fix Suggestions with an API key configured, in which case the flagged code context is sent to the Anthropic API. No account is required for any other feature. No telemetry.
 
 ---
 
