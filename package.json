@@ -2,7 +2,7 @@
   "name": "shieldprompt",
   "displayName": "ShieldPrompt",
   "description": "Detects security vulnerabilities in AI-generated code the moment you paste it",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "publisher": "shieldprompt",
   "engines": {
     "vscode": "^1.78.0"
