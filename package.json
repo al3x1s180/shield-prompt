@@ -11,6 +11,11 @@
     "Linters",
     "Other"
   ],
+
+  "repository": {
+  "type": "git",
+  "url": "https://github.com/al3x1s180/shield-prompt"
+},
   "activationEvents": [
     "onStartupFinished"
   ],
