@@ -26,7 +26,7 @@ export function onPaste(callback: PasteCallback): vscode.Disposable {
       return;
     }
 
-    const config = vscode.workspace.getConfiguration("pasteguard");
+    const config = vscode.workspace.getConfiguration("shieldprompt");
     const enabled = config.get<boolean>("enabled", true);
     if (!enabled) {
       return;
