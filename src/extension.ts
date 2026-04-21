@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { onPaste } from "./detector";
 import { analyse, fingerprint, Finding, AIFingerprint } from "./analyser";
 import { semanticAnalyse } from "./semanticAnalyser";
-import { PasteGuardPanel } from "./panel";
+import { ShieldPromptPanel } from "./panel";
 import {
   applyDecorations,
   clearDecorations,
@@ -12,12 +12,12 @@ import {
 import { readProjectDeps } from "./depReader";
 
 let statusBarItem: vscode.StatusBarItem;
-let panel: PasteGuardPanel;
+let panel: ShieldPromptPanel;
 let currentFindings: Finding[] = [];
 let currentFingerprint: AIFingerprint = { isAI: false, confidence: "low" };
 
 export function activate(context: vscode.ExtensionContext): void {
-  panel = new PasteGuardPanel((remainingFindings) => {
+  panel = new ShieldPromptPanel((remainingFindings) => {
     currentFindings = remainingFindings;
     updateStatusBar(remainingFindings);
   });
@@ -27,40 +27,40 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.StatusBarAlignment.Left,
     100
   );
-  statusBarItem.command = "pasteguard.openPanel";
-  statusBarItem.text = "$(shield) PasteGuard: 0 issues";
+  statusBarItem.command = "shieldprompt.openPanel";
+  statusBarItem.text = "$(shield) ShieldPrompt: 0 issues";
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
   // Commands
   context.subscriptions.push(
-    vscode.commands.registerCommand("pasteguard.openPanel", () => {
+    vscode.commands.registerCommand("shieldprompt.openPanel", () => {
       panel.show(currentFindings, currentFingerprint);
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("pasteguard.resetSuppressions", () => {
-      const config = vscode.workspace.getConfiguration("pasteguard");
+    vscode.commands.registerCommand("shieldprompt.resetSuppressions", () => {
+      const config = vscode.workspace.getConfiguration("shieldprompt");
       config.update("suppressedRules", [], vscode.ConfigurationTarget.Workspace);
-      vscode.window.showInformationMessage("PasteGuard: All rule suppressions have been reset.");
+      vscode.window.showInformationMessage("ShieldPrompt: All rule suppressions have been reset.");
     })
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("pasteguard.toggleEnabled", () => {
-      const config = vscode.workspace.getConfiguration("pasteguard");
+    vscode.commands.registerCommand("shieldprompt.toggleEnabled", () => {
+      const config = vscode.workspace.getConfiguration("shieldprompt");
       const current = config.get<boolean>("enabled", true);
       config.update("enabled", !current, vscode.ConfigurationTarget.Workspace);
       vscode.window.showInformationMessage(
-        `PasteGuard: ${!current ? "Enabled" : "Disabled"}`
+        `ShieldPrompt: ${!current ? "Enabled" : "Disabled"}`
       );
     })
   );
 
   // Paste detection — async to support dependency reading
   const pasteDisposable = onPaste((text, document, range) => {
-    const config = vscode.workspace.getConfiguration("pasteguard");
+    const config = vscode.workspace.getConfiguration("shieldprompt");
     const languageId = document.languageId;
 
     // Read deps and analyse asynchronously
@@ -119,7 +119,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 function updateStatusBar(findings: Finding[]): void {
   const count = findings.length;
-  statusBarItem.text = `$(shield) PasteGuard: ${count} issue${count !== 1 ? "s" : ""}`;
+  statusBarItem.text = `$(shield) ShieldPrompt: ${count} issue${count !== 1 ? "s" : ""}`;
 
   const hasCritical = findings.some((f) => f.severity === "critical");
   const hasWarning = findings.some((f) => f.severity === "warning");

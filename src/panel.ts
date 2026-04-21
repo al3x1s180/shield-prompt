@@ -42,7 +42,7 @@ function renderCveBadges(cves: CVERef[]): string {
     .join(" ");
 }
 
-export class PasteGuardPanel {
+export class ShieldPromptPanel {
   private panel: vscode.WebviewPanel | undefined;
   private disposables: vscode.Disposable[] = [];
   private _currentFindings: Finding[] = [];
@@ -64,8 +64,8 @@ export class PasteGuardPanel {
     }
 
     this.panel = vscode.window.createWebviewPanel(
-      "pasteguardPanel",
-      "PasteGuard",
+      "shieldpromptPanel",
+      "ShieldPrompt",
       { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
       { enableScripts: true, retainContextWhenHidden: true }
     );
