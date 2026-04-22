@@ -18,7 +18,8 @@
         { "type": "regex", "match": "session\\.execute\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["bindparams\\(", ":param_\\w+", "text\\([^,]+,\\s*\\{", "parameterized"],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "sqlalchemy-filter-injection",
@@ -34,7 +35,8 @@
         { "type": "regex", "match": "\\.filter\\s*\\(\\s*text\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["==\\s*\\w+\\s*\\)", "bindparams\\(", "literal\\("],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "sqlalchemy-order-by-injection",
@@ -49,7 +51,8 @@
         { "type": "regex", "match": "\\.order_by\\s*\\(\\s*text\\s*\\([^)]*(?:request\\.|args\\.)", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["ALLOWED_SORT_COLUMNS", "whitelist", "if.*not.*in.*columns"],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "sqlalchemy-connection-string-injection",
@@ -64,7 +67,8 @@
         { "type": "regex", "match": "create_engine\\s*\\([^)]*\\+.*(?:request\\.|args\\.|form\\.)", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["os\\.environ", "os\\.getenv", "DATABASE_URL"],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "sqlalchemy-bulk-no-validate",
@@ -78,6 +82,7 @@
         { "type": "regex", "match": "(?:bulk_insert_mappings|bulk_save_objects|insert\\(\\))\\.values\\s*\\([^)]*(?:request\\.|args\\.|form\\.)", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["schema\\.load\\(", "validate\\(", "marshmallow", "pydantic"],
+      "safeguardScope": "file",
       "requiresTaint": true
     }
   ]

@@ -6,6 +6,11 @@ export interface Finding {
   message: string;
   detail: string;
   cves: CVERef[];
+  framework?: string;
+  // Vulnerability taxonomy used for cross-layer dedup. Optional because
+  // hardcoded rules predate this field; ruleLoader.categoryDedup falls back
+  // to a ruleId-regex heuristic when `category` is absent.
+  category?: string;
 }
 
 export interface AIFingerprint {
@@ -49,7 +54,7 @@ function shannonEntropy(s: string): number {
 }
 
 // ─── comment stripping ────────────────────────────────────────────────────────
-function stripLineComment(line: string): string {
+export function stripLineComment(line: string): string {
   return line.replace(/(?<!['"\/])\/\/.*$/, "").replace(/^\s*#.*$/, "");
 }
 

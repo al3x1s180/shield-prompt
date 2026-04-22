@@ -6,16 +6,35 @@
     {
       "ruleId": "flask-debug-mode",
       "severity": "critical",
-      "message": "Flask debug mode enabled — Werkzeug debugger allows RCE",
+      "message": "Flask debug mode enabled \u2014 Werkzeug debugger allows RCE",
       "detail": "Running Flask with debug=True enables the Werkzeug interactive debugger in the browser. Any visitor can execute arbitrary Python code. Never enable debug mode in production.",
       "cves": [
-        { "id": "CWE-94", "url": "https://cwe.mitre.org/data/definitions/94.html", "description": "Code Injection via debug interface" }
+        {
+          "id": "CWE-94",
+          "url": "https://cwe.mitre.org/data/definitions/94.html",
+          "description": "Code Injection via debug interface"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "app\\.run\\s*\\([^)]*debug\\s*=\\s*True", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "^\\s*DEBUG\\s*=\\s*True", "flags": "gm", "context": "line" }
+        {
+          "type": "regex",
+          "match": "app\\.run\\s*\\([^)]*debug\\s*=\\s*True",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "^\\s*DEBUG\\s*=\\s*True",
+          "flags": "gm",
+          "context": "line"
+        }
       ],
-      "safeguards": ["os\\.environ", "os\\.getenv", "config\\[", "app\\.config\\.from"],
+      "safeguards": [
+        "os\\.environ",
+        "os\\.getenv",
+        "config\\[",
+        "app\\.config\\.from"
+      ],
       "requiresTaint": false
     },
     {
@@ -24,15 +43,39 @@
       "message": "Raw SQL in Flask route built from request data",
       "detail": "Building SQL with f-strings or % formatting from Flask request.form/args/json allows SQL injection. Use SQLAlchemy ORM or parameterised queries with %s placeholders.",
       "cves": [
-        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+        {
+          "id": "CWE-89",
+          "url": "https://cwe.mitre.org/data/definitions/89.html",
+          "description": "SQL Injection"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:db|cursor|conn)\\.execute\\s*\\(\\s*f['\"].*(?:SELECT|INSERT|UPDATE|DELETE)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "(?:db|cursor|conn)\\.execute\\s*\\([^)]*%\\s*(?:request\\.form|request\\.args|request\\.json)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "(?:db|cursor|conn)\\.execute\\s*\\([^)]*\\+.*(?:request\\.form|request\\.args)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:db|cursor|conn)\\.execute\\s*\\(\\s*f['\"].*(?:SELECT|INSERT|UPDATE|DELETE)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "(?:db|cursor|conn)\\.execute\\s*\\([^)]*%\\s*(?:request\\.form|request\\.args|request\\.json)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "(?:db|cursor|conn)\\.execute\\s*\\([^)]*\\+.*(?:request\\.form|request\\.args)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["execute\\([^,]+,\\s*\\(", "execute\\([^,]+,\\s*\\{", "text\\s*\\(.*bindparams"],
-      "requiresTaint": true
+      "safeguards": [
+        "execute\\([^,]+,\\s*\\(",
+        "execute\\([^,]+,\\s*\\{",
+        "text\\s*\\(.*bindparams"
+      ],
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "flask-xss-render",
@@ -40,15 +83,38 @@
       "message": "Flask render_template_string with user-controlled template",
       "detail": "Passing user input as the template string to render_template_string allows SSTI and RCE. Use render_template() with a fixed template file and pass user data as context variables.",
       "cves": [
-        { "id": "CWE-94", "url": "https://cwe.mitre.org/data/definitions/94.html", "description": "Server-Side Template Injection" },
-        { "id": "CVE-2019-8341", "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-8341", "description": "Flask/Jinja2 SSTI" }
+        {
+          "id": "CWE-94",
+          "url": "https://cwe.mitre.org/data/definitions/94.html",
+          "description": "Server-Side Template Injection"
+        },
+        {
+          "id": "CVE-2019-8341",
+          "url": "https://nvd.nist.gov/vuln/detail/CVE-2019-8341",
+          "description": "Flask/Jinja2 SSTI"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "render_template_string\\s*\\([^)]*(?:request\\.form|request\\.args|request\\.json|request\\.data)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "render_template_string\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "render_template_string\\s*\\([^)]*(?:request\\.form|request\\.args|request\\.json|request\\.data)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "render_template_string\\s*\\(\\s*f['\"]",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["render_template\\(", "escape\\(", "Markup\\.escape\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "render_template\\(",
+        "escape\\(",
+        "Markup\\.escape\\("
+      ],
+      "requiresTaint": true,
+      "category": "xss"
     },
     {
       "ruleId": "flask-open-redirect",
@@ -56,14 +122,33 @@
       "message": "Flask redirect() with user-controlled URL",
       "detail": "Redirecting to a URL from request.args/form without validation enables open redirect attacks. Validate with is_safe_url() or check the URL is a relative path.",
       "cves": [
-        { "id": "CWE-601", "url": "https://cwe.mitre.org/data/definitions/601.html", "description": "URL Redirection to Untrusted Site" }
+        {
+          "id": "CWE-601",
+          "url": "https://cwe.mitre.org/data/definitions/601.html",
+          "description": "URL Redirection to Untrusted Site"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "redirect\\s*\\([^)]*(?:request\\.args|request\\.form|request\\.json)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "redirect\\s*\\(\\s*f['\"].*\\{(?:next|redirect|url|target)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "redirect\\s*\\([^)]*(?:request\\.args|request\\.form|request\\.json)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "redirect\\s*\\(\\s*f['\"].*\\{(?:next|redirect|url|target)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["is_safe_url\\(", "url_has_allowed_host\\(", "startswith\\('/'\\)"],
-      "requiresTaint": true
+      "safeguards": [
+        "is_safe_url\\(",
+        "url_has_allowed_host\\(",
+        "startswith\\('/'\\)"
+      ],
+      "requiresTaint": true,
+      "category": "open-redirect"
     },
     {
       "ruleId": "flask-path-traversal",
@@ -71,14 +156,33 @@
       "message": "Flask route uses request data in file operation without sanitisation",
       "detail": "Using request.args/form in file operations allows directory traversal. Use send_from_directory() with a fixed base directory instead of send_file() with user input.",
       "cves": [
-        { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
+        {
+          "id": "CWE-22",
+          "url": "https://cwe.mitre.org/data/definitions/22.html",
+          "description": "Path Traversal"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "send_file\\s*\\([^)]*(?:request\\.args|request\\.form|request\\.json)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "open\\s*\\([^)]*(?:request\\.args|request\\.form)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "send_file\\s*\\([^)]*(?:request\\.args|request\\.form|request\\.json)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "open\\s*\\([^)]*(?:request\\.args|request\\.form)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["send_from_directory\\(", "os\\.path\\.basename\\(", "safe_join\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "send_from_directory\\(",
+        "os\\.path\\.basename\\(",
+        "safe_join\\("
+      ],
+      "requiresTaint": true,
+      "category": "path-traversal"
     },
     {
       "ruleId": "flask-ssrf",
@@ -86,13 +190,27 @@
       "message": "Flask route makes HTTP request to user-controlled URL",
       "detail": "Using request data as a URL in requests.get() enables SSRF. Validate against an allowlist of permitted hosts.",
       "cves": [
-        { "id": "CWE-918", "url": "https://cwe.mitre.org/data/definitions/918.html", "description": "Server-Side Request Forgery" }
+        {
+          "id": "CWE-918",
+          "url": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "Server-Side Request Forgery"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "requests\\.(?:get|post|put|delete)\\s*\\([^)]*(?:request\\.args|request\\.form|request\\.json)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "requests\\.(?:get|post|put|delete)\\s*\\([^)]*(?:request\\.args|request\\.form|request\\.json)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["ALLOWED_HOSTS", "urlparse.*netloc", "allowed_domains"],
-      "requiresTaint": true
+      "safeguards": [
+        "ALLOWED_HOSTS",
+        "urlparse.*netloc",
+        "allowed_domains"
+      ],
+      "requiresTaint": true,
+      "category": "ssrf"
     },
     {
       "ruleId": "flask-secret-key-hardcoded",
@@ -100,15 +218,37 @@
       "message": "Flask SECRET_KEY hardcoded in source code",
       "detail": "A hardcoded SECRET_KEY can be read from the repository, allowing attackers to forge session cookies. Load it from environment variables with os.environ.get('SECRET_KEY').",
       "cves": [
-        { "id": "CWE-798", "url": "https://cwe.mitre.org/data/definitions/798.html", "description": "Use of Hard-coded Credentials" }
+        {
+          "id": "CWE-798",
+          "url": "https://cwe.mitre.org/data/definitions/798.html",
+          "description": "Use of Hard-coded Credentials"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "app\\.secret_key\\s*=\\s*['\"][^'\"]{9,}['\"]", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "SECRET_KEY\\s*=\\s*['\"][^'\"]{9,}['\"]", "flags": "g", "context": "line" }
+        {
+          "type": "regex",
+          "match": "app\\.secret_key\\s*=\\s*['\"][^'\"]{9,}['\"]",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "SECRET_KEY\\s*=\\s*['\"][^'\"]{9,}['\"]",
+          "flags": "g",
+          "context": "line"
+        }
       ],
-      "safeguards": ["os\\.environ", "os\\.getenv", "config\\.", "environ.get"],
+      "safeguards": [
+        "os\\.environ",
+        "os\\.getenv",
+        "config\\.",
+        "environ.get"
+      ],
       "requiresTaint": false,
-      "entropyCheck": { "minLength": 9, "minEntropy": 2.5 }
+      "entropyCheck": {
+        "minLength": 9,
+        "minEntropy": 2.5
+      }
     },
     {
       "ruleId": "flask-no-csrf",
@@ -116,12 +256,29 @@
       "message": "Flask POST route missing CSRF protection",
       "detail": "Flask does not include CSRF protection by default. POST routes without Flask-WTF CSRFProtect or equivalent are vulnerable to CSRF attacks.",
       "cves": [
-        { "id": "CWE-352", "url": "https://cwe.mitre.org/data/definitions/352.html", "description": "Cross-Site Request Forgery (CSRF)" }
+        {
+          "id": "CWE-352",
+          "url": "https://cwe.mitre.org/data/definitions/352.html",
+          "description": "Cross-Site Request Forgery (CSRF)"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "@(?:app|blueprint)\\.route\\s*\\([^)]*['\"]POST['\"]", "flags": "gi", "context": "multiline", "windowLines": 3 }
+        {
+          "type": "regex",
+          "match": "@(?:app|blueprint)\\.route\\s*\\([^)]*['\"]POST['\"]",
+          "flags": "gi",
+          "context": "multiline",
+          "windowLines": 3
+        }
       ],
-      "safeguards": ["CSRFProtect\\(", "csrf\\.protect", "validate_on_submit\\(", "csrf_token", "WTForms"],
+      "safeguards": [
+        "CSRFProtect\\(",
+        "csrf\\.protect",
+        "validate_on_submit\\(",
+        "csrf_token",
+        "WTForms"
+      ],
+      "safeguardScope": "file",
       "requiresTaint": false
     },
     {
@@ -130,12 +287,25 @@
       "message": "Flask response cookie missing HttpOnly or Secure flag",
       "detail": "Cookies set via response.set_cookie() without httponly=True and secure=True can be stolen via XSS or intercepted over HTTP.",
       "cves": [
-        { "id": "CWE-1004", "url": "https://cwe.mitre.org/data/definitions/1004.html", "description": "Sensitive Cookie Without HttpOnly Flag" }
+        {
+          "id": "CWE-1004",
+          "url": "https://cwe.mitre.org/data/definitions/1004.html",
+          "description": "Sensitive Cookie Without HttpOnly Flag"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "set_cookie\\s*\\([^)]+\\)(?![^;\\n]*httponly\\s*=\\s*True)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "set_cookie\\s*\\([^)]+\\)(?![^;\\n]*httponly\\s*=\\s*True)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["httponly\\s*=\\s*True", "secure\\s*=\\s*True"],
+      "safeguards": [
+        "httponly\\s*=\\s*True",
+        "secure\\s*=\\s*True"
+      ],
+      "safeguardScope": "file",
       "requiresTaint": false
     }
   ]

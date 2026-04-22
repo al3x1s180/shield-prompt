@@ -6,19 +6,48 @@
     {
       "ruleId": "django-raw-sql",
       "severity": "critical",
-      "message": "Django raw() or extra() with user-controlled input — SQL injection",
+      "message": "Django raw() or extra() with user-controlled input \u2014 SQL injection",
       "detail": "Django's raw() and extra() bypass ORM parameterisation. Never use f-strings or % formatting with user input in these calls. Use parameterised raw() with %s and a params list.",
       "cves": [
-        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+        {
+          "id": "CWE-89",
+          "url": "https://cwe.mitre.org/data/definitions/89.html",
+          "description": "SQL Injection"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "\\.raw\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "\\.raw\\s*\\([^)]*%\\s*(?:request\\.GET|request\\.POST|request\\.data)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "\\.extra\\s*\\(\\s*where\\s*=\\s*\\[[^\\]]*f['\"]", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "cursor\\.execute\\s*\\(\\s*f['\"]", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "\\.raw\\s*\\(\\s*f['\"]",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "\\.raw\\s*\\([^)]*%\\s*(?:request\\.GET|request\\.POST|request\\.data)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "\\.extra\\s*\\(\\s*where\\s*=\\s*\\[[^\\]]*f['\"]",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "cursor\\.execute\\s*\\(\\s*f['\"]",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["\\.raw\\s*\\([^,]+,\\s*\\[", "cursor\\.execute\\s*\\([^,]+,\\s*\\[", "params\\s*=\\s*\\["],
-      "requiresTaint": true
+      "safeguards": [
+        "\\.raw\\s*\\([^,]+,\\s*\\[",
+        "cursor\\.execute\\s*\\([^,]+,\\s*\\[",
+        "params\\s*=\\s*\\["
+      ],
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "django-csrf-exempt",
@@ -26,12 +55,26 @@
       "message": "@csrf_exempt disables CSRF protection on this view",
       "detail": "Decorating a view with @csrf_exempt removes Django's built-in CSRF protection. Only use this on views that implement their own CSRF validation (e.g. API views using token auth).",
       "cves": [
-        { "id": "CWE-352", "url": "https://cwe.mitre.org/data/definitions/352.html", "description": "Cross-Site Request Forgery (CSRF)" }
+        {
+          "id": "CWE-352",
+          "url": "https://cwe.mitre.org/data/definitions/352.html",
+          "description": "Cross-Site Request Forgery (CSRF)"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "@csrf_exempt", "flags": "g", "context": "line" }
+        {
+          "type": "regex",
+          "match": "@csrf_exempt",
+          "flags": "g",
+          "context": "line"
+        }
       ],
-      "safeguards": ["SessionAuthentication", "TokenAuthentication", "JWT", "api_view"],
+      "safeguards": [
+        "SessionAuthentication",
+        "TokenAuthentication",
+        "JWT",
+        "api_view"
+      ],
       "requiresTaint": false
     },
     {
@@ -40,14 +83,33 @@
       "message": "mark_safe() with user-controlled content enables XSS",
       "detail": "mark_safe() tells Django's template engine the string is safe HTML, bypassing auto-escaping. Never call it on user input. Use conditional_escape() or keep auto-escaping enabled.",
       "cves": [
-        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+        {
+          "id": "CWE-79",
+          "url": "https://cwe.mitre.org/data/definitions/79.html",
+          "description": "Cross-site Scripting (XSS)"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "mark_safe\\s*\\([^)]*(?:request\\.GET|request\\.POST|request\\.data|request\\.body)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "mark_safe\\s*\\(\\s*f['\"].*\\{(?:request|data|user_input)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "mark_safe\\s*\\([^)]*(?:request\\.GET|request\\.POST|request\\.data|request\\.body)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "mark_safe\\s*\\(\\s*f['\"].*\\{(?:request|data|user_input)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["conditional_escape\\(", "escape\\(", "strip_tags\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "conditional_escape\\(",
+        "escape\\(",
+        "strip_tags\\("
+      ],
+      "requiresTaint": true,
+      "category": "xss"
     },
     {
       "ruleId": "django-open-redirect",
@@ -55,14 +117,33 @@
       "message": "Django redirect() with user-controlled URL",
       "detail": "Redirecting to a URL from request.GET or request.POST without validation enables open redirect. Use url_has_allowed_host_and_scheme() to validate.",
       "cves": [
-        { "id": "CWE-601", "url": "https://cwe.mitre.org/data/definitions/601.html", "description": "URL Redirection to Untrusted Site" }
+        {
+          "id": "CWE-601",
+          "url": "https://cwe.mitre.org/data/definitions/601.html",
+          "description": "URL Redirection to Untrusted Site"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "HttpResponseRedirect\\s*\\([^)]*(?:request\\.GET|request\\.POST|request\\.data)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "redirect\\s*\\([^)]*(?:request\\.GET|request\\.POST)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "HttpResponseRedirect\\s*\\([^)]*(?:request\\.GET|request\\.POST|request\\.data)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "redirect\\s*\\([^)]*(?:request\\.GET|request\\.POST)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["url_has_allowed_host_and_scheme\\(", "is_safe_url\\(", "resolve_url\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "url_has_allowed_host_and_scheme\\(",
+        "is_safe_url\\(",
+        "resolve_url\\("
+      ],
+      "requiresTaint": true,
+      "category": "open-redirect"
     },
     {
       "ruleId": "django-path-traversal",
@@ -70,14 +151,33 @@
       "message": "Django view uses request data in file operation without sanitisation",
       "detail": "Using request.GET/POST in file operations allows path traversal. Validate paths against a fixed base directory using os.path.realpath().",
       "cves": [
-        { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
+        {
+          "id": "CWE-22",
+          "url": "https://cwe.mitre.org/data/definitions/22.html",
+          "description": "Path Traversal"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "open\\s*\\([^)]*(?:request\\.GET|request\\.POST|request\\.data)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "FileResponse\\s*\\([^)]*(?:request\\.GET|request\\.POST)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "open\\s*\\([^)]*(?:request\\.GET|request\\.POST|request\\.data)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "FileResponse\\s*\\([^)]*(?:request\\.GET|request\\.POST)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["os\\.path\\.basename\\(", "os\\.path\\.realpath\\(", "safe_join\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "os\\.path\\.basename\\(",
+        "os\\.path\\.realpath\\(",
+        "safe_join\\("
+      ],
+      "requiresTaint": true,
+      "category": "path-traversal"
     },
     {
       "ruleId": "django-ssrf",
@@ -85,13 +185,27 @@
       "message": "Django view makes HTTP request to user-controlled URL",
       "detail": "Using request data as a URL in requests.get() enables SSRF. Validate against an allowlist of permitted hosts.",
       "cves": [
-        { "id": "CWE-918", "url": "https://cwe.mitre.org/data/definitions/918.html", "description": "Server-Side Request Forgery" }
+        {
+          "id": "CWE-918",
+          "url": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "Server-Side Request Forgery"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "requests\\.(?:get|post|put|delete)\\s*\\([^)]*(?:request\\.GET|request\\.POST|request\\.data)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "requests\\.(?:get|post|put|delete)\\s*\\([^)]*(?:request\\.GET|request\\.POST|request\\.data)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["ALLOWED_HOSTS", "urlparse.*netloc", "allowed_domains"],
-      "requiresTaint": true
+      "safeguards": [
+        "ALLOWED_HOSTS",
+        "urlparse.*netloc",
+        "allowed_domains"
+      ],
+      "requiresTaint": true,
+      "category": "ssrf"
     },
     {
       "ruleId": "django-secret-key-hardcoded",
@@ -99,14 +213,31 @@
       "message": "Django SECRET_KEY hardcoded in settings",
       "detail": "A hardcoded SECRET_KEY allows attackers to forge session cookies and CSRF tokens. Load it from environment variables using os.environ.get('DJANGO_SECRET_KEY').",
       "cves": [
-        { "id": "CWE-798", "url": "https://cwe.mitre.org/data/definitions/798.html", "description": "Use of Hard-coded Credentials" }
+        {
+          "id": "CWE-798",
+          "url": "https://cwe.mitre.org/data/definitions/798.html",
+          "description": "Use of Hard-coded Credentials"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "SECRET_KEY\\s*=\\s*['\"][^'\"]{20,}['\"]", "flags": "g", "context": "line" }
+        {
+          "type": "regex",
+          "match": "SECRET_KEY\\s*=\\s*['\"][^'\"]{20,}['\"]",
+          "flags": "g",
+          "context": "line"
+        }
       ],
-      "safeguards": ["os\\.environ", "os\\.getenv", "env\\(", "config\\("],
+      "safeguards": [
+        "os\\.environ",
+        "os\\.getenv",
+        "env\\(",
+        "config\\("
+      ],
       "requiresTaint": false,
-      "entropyCheck": { "minLength": 20, "minEntropy": 3.0 }
+      "entropyCheck": {
+        "minLength": 20,
+        "minEntropy": 3.0
+      }
     },
     {
       "ruleId": "django-debug-true",
@@ -114,24 +245,47 @@
       "message": "Django DEBUG=True exposes detailed error pages",
       "detail": "DEBUG=True in production exposes stack traces, local variables, and settings values to anyone who triggers an error. Always set DEBUG=False in production and load from environment.",
       "cves": [
-        { "id": "CWE-209", "url": "https://cwe.mitre.org/data/definitions/209.html", "description": "Generation of Error Message Containing Sensitive Information" }
+        {
+          "id": "CWE-209",
+          "url": "https://cwe.mitre.org/data/definitions/209.html",
+          "description": "Generation of Error Message Containing Sensitive Information"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "^\\s*DEBUG\\s*=\\s*True", "flags": "gm", "context": "line" }
+        {
+          "type": "regex",
+          "match": "^\\s*DEBUG\\s*=\\s*True",
+          "flags": "gm",
+          "context": "line"
+        }
       ],
-      "safeguards": ["os\\.environ", "os\\.getenv", "env\\(", "config\\("],
+      "safeguards": [
+        "os\\.environ",
+        "os\\.getenv",
+        "env\\(",
+        "config\\("
+      ],
       "requiresTaint": false
     },
     {
       "ruleId": "django-allowed-hosts-wildcard",
       "severity": "critical",
-      "message": "Django ALLOWED_HOSTS set to ['*'] — HTTP Host header injection risk",
+      "message": "Django ALLOWED_HOSTS set to ['*'] \u2014 HTTP Host header injection risk",
       "detail": "ALLOWED_HOSTS=['*'] disables Host header validation, enabling Host header injection attacks that can poison cache or generate malicious password reset links. Specify explicit hostnames.",
       "cves": [
-        { "id": "CWE-116", "url": "https://cwe.mitre.org/data/definitions/116.html", "description": "Improper Encoding or Escaping of Output" }
+        {
+          "id": "CWE-116",
+          "url": "https://cwe.mitre.org/data/definitions/116.html",
+          "description": "Improper Encoding or Escaping of Output"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "ALLOWED_HOSTS\\s*=\\s*\\[\\s*['\"]\\*['\"]\\s*\\]", "flags": "g", "context": "line" }
+        {
+          "type": "regex",
+          "match": "ALLOWED_HOSTS\\s*=\\s*\\[\\s*['\"]\\*['\"]\\s*\\]",
+          "flags": "g",
+          "context": "line"
+        }
       ],
       "safeguards": [],
       "requiresTaint": false
@@ -142,14 +296,32 @@
       "message": "Shell command built from Django request data",
       "detail": "Passing request data to subprocess or os.system allows command injection. Use subprocess.run() with a list and shell=False.",
       "cves": [
-        { "id": "CWE-78", "url": "https://cwe.mitre.org/data/definitions/78.html", "description": "OS Command Injection" }
+        {
+          "id": "CWE-78",
+          "url": "https://cwe.mitre.org/data/definitions/78.html",
+          "description": "OS Command Injection"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "subprocess\\.(?:run|call|Popen)\\s*\\(.*shell\\s*=\\s*True.*(?:request\\.GET|request\\.POST)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "os\\.system\\s*\\(\\s*f['\"].*\\{(?:request|data)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "subprocess\\.(?:run|call|Popen)\\s*\\(.*shell\\s*=\\s*True.*(?:request\\.GET|request\\.POST)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "os\\.system\\s*\\(\\s*f['\"].*\\{(?:request|data)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["shell\\s*=\\s*False", "shlex\\.quote\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "shell\\s*=\\s*False",
+        "shlex\\.quote\\("
+      ],
+      "requiresTaint": true,
+      "category": "command-injection"
     }
   ]
 }

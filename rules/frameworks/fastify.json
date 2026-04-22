@@ -9,12 +9,27 @@
       "message": "Fastify route missing request schema validation",
       "detail": "Fastify supports JSON Schema validation on routes. Routes without a schema property accept arbitrary input shapes. Define body, querystring, and params schemas for all routes.",
       "cves": [
-        { "id": "CWE-20", "url": "https://cwe.mitre.org/data/definitions/20.html", "description": "Improper Input Validation" }
+        {
+          "id": "CWE-20",
+          "url": "https://cwe.mitre.org/data/definitions/20.html",
+          "description": "Improper Input Validation"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "fastify\\.(?:get|post|put|delete|patch)\\s*\\([^,]+,\\s*\\{(?![^}]*schema)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "fastify\\.(?:get|post|put|delete|patch)\\s*\\([^,]+,\\s*\\{(?![^}]*schema)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["schema\\s*:", "body\\s*:", "querystring\\s*:", "params\\s*:"],
+      "safeguards": [
+        "schema\\s*:",
+        "body\\s*:",
+        "querystring\\s*:",
+        "params\\s*:"
+      ],
+      "safeguardScope": "file",
       "requiresTaint": false
     },
     {
@@ -23,14 +38,34 @@
       "message": "SQL query built from Fastify request data",
       "detail": "Building SQL with request.body/params/query allows injection. Use parameterised queries with ? or $N placeholders.",
       "cves": [
-        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+        {
+          "id": "CWE-89",
+          "url": "https://cwe.mitre.org/data/definitions/89.html",
+          "description": "SQL Injection"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:query|sql)\\s*[+=]\\s*.*\\+.*request\\.(?:body|params|query)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "(?:query|sql)\\s*=\\s*`[^`]*\\$\\{\\s*request\\.(?:body|params|query)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:query|sql)\\s*[+=]\\s*.*\\+.*request\\.(?:body|params|query)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "(?:query|sql)\\s*=\\s*`[^`]*\\$\\{\\s*request\\.(?:body|params|query)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["\\?\\s*,", "\\$[0-9]", "parameterized", "prepared"],
-      "requiresTaint": true
+      "safeguards": [
+        "\\?\\s*,",
+        "\\$[0-9]",
+        "parameterized",
+        "prepared"
+      ],
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "fastify-ssrf",
@@ -38,13 +73,27 @@
       "message": "Fastify route makes HTTP request to user-controlled URL",
       "detail": "Using request.body/params/query as a fetch URL enables SSRF. Validate against an allowlist of permitted hosts.",
       "cves": [
-        { "id": "CWE-918", "url": "https://cwe.mitre.org/data/definitions/918.html", "description": "Server-Side Request Forgery" }
+        {
+          "id": "CWE-918",
+          "url": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "Server-Side Request Forgery"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:fetch|axios\\.get|axios\\.post|got)\\s*\\([^)]*request\\.(?:body|params|query)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:fetch|axios\\.get|axios\\.post|got)\\s*\\([^)]*request\\.(?:body|params|query)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["allowedHosts", "ALLOWED_DOMAINS", "new URL.*hostname"],
-      "requiresTaint": true
+      "safeguards": [
+        "allowedHosts",
+        "ALLOWED_DOMAINS",
+        "new URL.*hostname"
+      ],
+      "requiresTaint": true,
+      "category": "ssrf"
     },
     {
       "ruleId": "fastify-path-traversal",
@@ -52,13 +101,27 @@
       "message": "File system operation using Fastify request params without sanitisation",
       "detail": "Using request.params or request.query in file operations without sanitisation allows path traversal.",
       "cves": [
-        { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
+        {
+          "id": "CWE-22",
+          "url": "https://cwe.mitre.org/data/definitions/22.html",
+          "description": "Path Traversal"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:readFile|createReadStream|sendFile)\\s*\\([^)]*request\\.(?:params|query|body)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:readFile|createReadStream|sendFile)\\s*\\([^)]*request\\.(?:params|query|body)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["path\\.basename\\(", "normalize\\(", "allowedPaths"],
-      "requiresTaint": true
+      "safeguards": [
+        "path\\.basename\\(",
+        "normalize\\(",
+        "allowedPaths"
+      ],
+      "requiresTaint": true,
+      "category": "path-traversal"
     },
     {
       "ruleId": "fastify-reply-raw-html",
@@ -66,12 +129,25 @@
       "message": "Fastify reply sends user input as HTML without encoding",
       "detail": "Sending user-controlled data as HTML via reply.type('text/html').send() enables XSS. Encode the output or use reply.send() with JSON.",
       "cves": [
-        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+        {
+          "id": "CWE-79",
+          "url": "https://cwe.mitre.org/data/definitions/79.html",
+          "description": "Cross-site Scripting (XSS)"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "reply\\.(?:type\\s*\\(['\"`]text/html['\"`]\\)\\.)?send\\s*\\([^)]*request\\.(?:body|params|query)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "reply\\.(?:type\\s*\\(['\"`]text/html['\"`]\\)\\.)?send\\s*\\([^)]*request\\.(?:body|params|query)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["escapeHtml\\(", "sanitize\\(", "reply\\.type\\('application/json'\\)"],
+      "safeguards": [
+        "escapeHtml\\(",
+        "sanitize\\(",
+        "reply\\.type\\('application/json'\\)"
+      ],
       "requiresTaint": true
     },
     {
@@ -80,13 +156,31 @@
       "message": "Fastify CORS configured with wildcard origin",
       "detail": "Allowing all origins with '*' exposes the API to cross-origin attacks. Restrict to specific trusted domains.",
       "cves": [
-        { "id": "CWE-942", "url": "https://cwe.mitre.org/data/definitions/942.html", "description": "Permissive Cross-domain Policy" }
+        {
+          "id": "CWE-942",
+          "url": "https://cwe.mitre.org/data/definitions/942.html",
+          "description": "Permissive Cross-domain Policy"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "@fastify/cors.*origin\\s*:\\s*['\"`]\\*['\"`]", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "fastify\\.register.*cors.*origin\\s*:\\s*true", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "@fastify/cors.*origin\\s*:\\s*['\"`]\\*['\"`]",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "fastify\\.register.*cors.*origin\\s*:\\s*true",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["origin\\s*:\\s*\\[", "origin\\s*:\\s*function", "allowedOrigins"],
+      "safeguards": [
+        "origin\\s*:\\s*\\[",
+        "origin\\s*:\\s*function",
+        "allowedOrigins"
+      ],
       "requiresTaint": false
     },
     {
@@ -95,13 +189,31 @@
       "message": "Fastify JWT decoded without verification",
       "detail": "Using fastify-jwt's decode() method skips signature verification. Always use request.jwtVerify() or fastify.jwt.verify() to validate the token.",
       "cves": [
-        { "id": "CWE-347", "url": "https://cwe.mitre.org/data/definitions/347.html", "description": "Improper Verification of Cryptographic Signature" }
+        {
+          "id": "CWE-347",
+          "url": "https://cwe.mitre.org/data/definitions/347.html",
+          "description": "Improper Verification of Cryptographic Signature"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "fastify\\.jwt\\.decode\\s*\\(", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "request\\.jwtDecode\\s*\\(", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "fastify\\.jwt\\.decode\\s*\\(",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "request\\.jwtDecode\\s*\\(",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["jwtVerify\\(", "jwt\\.verify\\("],
+      "safeguards": [
+        "jwtVerify\\(",
+        "jwt\\.verify\\("
+      ],
+      "safeguardScope": "file",
       "requiresTaint": false
     }
   ]

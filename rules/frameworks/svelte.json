@@ -16,7 +16,8 @@
         { "type": "regex", "match": "\\{@html\\s+(?:data\\.|params\\.|body\\.|content|html|markup|post|article)", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["DOMPurify\\.sanitize\\(", "sanitizeHtml\\(", "xss\\("],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "xss"
     },
     {
       "ruleId": "svelte-server-load-no-auth",
@@ -30,6 +31,7 @@
         { "type": "regex", "match": "export\\s+(?:async\\s+)?function\\s+load\\s*\\(\\s*\\{", "flags": "gi", "context": "multiline", "windowLines": 8 }
       ],
       "safeguards": ["locals\\.user", "locals\\.session", "getSession\\(", "requireAuth\\(", "throw\\s+redirect\\(", "error\\(401", "authenticate"],
+      "safeguardScope": "file",
       "requiresTaint": false
     },
     {
@@ -44,6 +46,7 @@
         { "type": "regex", "match": "const\\s+data\\s*=\\s*await\\s+request\\.formData\\s*\\(\\s*\\)", "flags": "gi", "context": "multiline", "windowLines": 6 }
       ],
       "safeguards": ["\\.parse\\(", "\\.safeParse\\(", "\\.validate\\(", "z\\.object", "zod", "joi\\."],
+      "safeguardScope": "file",
       "requiresTaint": false
     },
     {
@@ -72,7 +75,8 @@
         { "type": "regex", "match": "throw\\s+redirect\\s*\\(\\s*\\d+\\s*,\\s*(?!\\s*['\"`]/)[^)]*(?:params\\.|url\\.|formData)", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["startsWith\\s*\\('/'\\)", "ALLOWED_REDIRECTS", "isRelative\\("],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "open-redirect"
     },
     {
       "ruleId": "svelte-ssrf-fetch",
@@ -87,7 +91,8 @@
         { "type": "regex", "match": "fetch\\s*\\(\\s*`[^`]*\\$\\{(?:params|url|formData)", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["ALLOWED_HOSTS", "allowedDomains", "new URL.*hostname"],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "ssrf"
     },
     {
       "ruleId": "svelte-cookie-no-httponly",
@@ -101,6 +106,7 @@
         { "type": "regex", "match": "cookies\\.set\\s*\\([^)]+\\)(?![^;]*httpOnly|[^;]*secure)", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["httpOnly\\s*:\\s*true", "secure\\s*:\\s*true"],
+      "safeguardScope": "file",
       "requiresTaint": false
     }
   ]

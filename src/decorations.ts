@@ -145,24 +145,6 @@ export function applyDecorations(
   editor.setDecorations(s.infoType, info);
 }
 
-export function clearDecorations(
-  editor: vscode.TextEditor,
-  range: vscode.Range
-): void {
-  const s = ensureDecorationTypes();
-
-  // Clear all decorations on lines within the given range
-  for (let line = range.start.line; line <= range.end.line; line++) {
-    const key = `${editor.document.uri.toString()}:${line}`;
-    s.activeRanges.delete(key);
-  }
-
-  // Re-apply only remaining decorations — for simplicity, just clear all on this editor
-  editor.setDecorations(s.criticalType, []);
-  editor.setDecorations(s.warningType, []);
-  editor.setDecorations(s.infoType, []);
-}
-
 export function clearAllDecorations(editor: vscode.TextEditor): void {
   const s = ensureDecorationTypes();
   editor.setDecorations(s.criticalType, []);
@@ -186,12 +168,16 @@ export function createEditClearListener(): vscode.Disposable {
       return;
     }
 
-    const editor = vscode.window.activeTextEditor;
-    if (!editor || editor.document !== event.document) {
+    // Don't rely on activeTextEditor — when the ShieldPrompt webview is
+    // focused it is undefined. Look up the editor for the edited document
+    // among all visible editors.
+    const editor = vscode.window.visibleTextEditors.find(
+      (e) => e.document === event.document
+    );
+    if (!editor) {
       return;
     }
 
-    // If any edited line has an active decoration, clear decorations on that range
     for (const change of event.contentChanges) {
       for (
         let line = change.range.start.line;
@@ -200,7 +186,7 @@ export function createEditClearListener(): vscode.Disposable {
       ) {
         const key = `${event.document.uri.toString()}:${line}`;
         if (state.activeRanges.has(key)) {
-          clearDecorations(editor, change.range);
+          clearAllDecorations(editor);
           return;
         }
       }

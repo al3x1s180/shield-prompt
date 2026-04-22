@@ -45,7 +45,8 @@
         { "type": "regex", "match": "\\.rpc\\s*\\([^,]+,\\s*[^)]*\\+[^)]*(?:req\\.|body\\.|params\\.)", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["eq\\(", "match\\(", "parameterized", "rpc\\([^,]+,\\s*\\{"],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "supabase-no-rls",
@@ -59,6 +60,7 @@
         { "type": "regex", "match": "supabase\\.from\\s*\\([^)]+\\)\\.select\\s*\\(", "flags": "gi", "context": "multiline", "windowLines": 3 }
       ],
       "safeguards": ["\\.eq\\s*\\(\\s*['\"]user_id", "\\.eq\\s*\\(\\s*['\"]owner_id", "RLS", "row level security", "session\\.user"],
+      "safeguardScope": "file",
       "requiresTaint": false
     },
     {

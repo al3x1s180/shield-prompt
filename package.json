@@ -2,7 +2,7 @@
   "name": "shieldprompt",
   "displayName": "ShieldPrompt",
   "description": "Detects security vulnerabilities in AI-generated code the moment you paste it",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "publisher": "shieldprompt",
   "engines": {
     "vscode": "^1.78.0"
@@ -41,6 +41,22 @@
       {
         "command": "shieldprompt.scanProject",
         "title": "ShieldPrompt: Scan Project"
+      },
+      {
+        "command": "shieldprompt.rescanFile",
+        "title": "ShieldPrompt: Re-scan current file"
+      },
+      {
+        "command": "shieldprompt.setAiFixApiKey",
+        "title": "ShieldPrompt: Set AI Fix API key"
+      },
+      {
+        "command": "shieldprompt.clearAiFixApiKey",
+        "title": "ShieldPrompt: Clear AI Fix API key"
+      },
+      {
+        "command": "shieldprompt.clearProjectScanCache",
+        "title": "ShieldPrompt: Clear project scan cache"
       }
     ],
     "configuration": {
@@ -65,15 +81,16 @@
           "default": [],
           "description": "List of rule IDs to suppress globally across the workspace."
         },
-        "shieldprompt.aiFixApiKey": {
-          "type": "string",
-          "default": "",
-          "description": "Anthropic API key for AI Fix Suggestions. If empty, the fix prompt is copied to your clipboard instead."
-        },
         "shieldprompt.aiFixModel": {
           "type": "string",
           "default": "claude-haiku-4-5-20251001",
           "description": "Anthropic model used for AI Fix Suggestions."
+        },
+        "shieldprompt.projectScanFileLimit": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 1,
+          "description": "Maximum number of files scanned by the Scan Project command. Subsequent scans reuse a per-file mtime cache, so raising this is usually cheap."
         }
       }
     }
@@ -81,12 +98,15 @@
   "scripts": {
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
     "@types/vscode": "^1.78.0",
     "esbuild": "^0.19.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^4.1.5"
   }
 }

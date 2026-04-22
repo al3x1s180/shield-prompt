@@ -9,12 +9,33 @@
       "message": "Next.js Server Action file missing authentication check",
       "detail": "Server Actions are publicly callable HTTP endpoints. Without an auth check, any unauthenticated user can invoke them. Call getServerSession() or auth() before any data mutation.",
       "cves": [
-        { "id": "CWE-306", "url": "https://cwe.mitre.org/data/definitions/306.html", "description": "Missing Authentication for Critical Function" }
+        {
+          "id": "CWE-306",
+          "url": "https://cwe.mitre.org/data/definitions/306.html",
+          "description": "Missing Authentication for Critical Function"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "^[\"']use server[\"']\\s*;?$", "flags": "gm", "context": "line" }
+        {
+          "type": "regex",
+          "match": "^[\"']use server[\"']\\s*;?$",
+          "flags": "gm",
+          "context": "line"
+        }
       ],
-      "safeguards": ["getServerSession", "auth()", "getSession", "currentUser()", "verifyToken", "requireAuth", "isAuthenticated", "session\\.user", "clerk\\.user", "supabase\\.auth"],
+      "safeguards": [
+        "getServerSession",
+        "auth()",
+        "getSession",
+        "currentUser()",
+        "verifyToken",
+        "requireAuth",
+        "isAuthenticated",
+        "session\\.user",
+        "clerk\\.user",
+        "supabase\\.auth"
+      ],
+      "safeguardScope": "file",
       "requiresTaint": false
     },
     {
@@ -23,12 +44,31 @@
       "message": "Server Action reads FormData without schema validation",
       "detail": "Server Actions receive user-controlled FormData. Validate all inputs with zod or similar before processing.",
       "cves": [
-        { "id": "CWE-20", "url": "https://cwe.mitre.org/data/definitions/20.html", "description": "Improper Input Validation" }
+        {
+          "id": "CWE-20",
+          "url": "https://cwe.mitre.org/data/definitions/20.html",
+          "description": "Improper Input Validation"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "formData\\.get\\s*\\([^)]+\\)", "flags": "gi", "context": "multiline", "windowLines": 8 }
+        {
+          "type": "regex",
+          "match": "formData\\.get\\s*\\([^)]+\\)",
+          "flags": "gi",
+          "context": "multiline",
+          "windowLines": 8
+        }
       ],
-      "safeguards": ["\\.parse\\(", "\\.safeParse\\(", "\\.validate\\(", "z\\.object", "yup\\.object", "zod", "valibot", "joi\\."],
+      "safeguards": [
+        "\\.parse\\(",
+        "\\.safeParse\\(",
+        "\\.validate\\(",
+        "z\\.object",
+        "yup\\.object",
+        "zod",
+        "valibot",
+        "joi\\."
+      ],
       "requiresTaint": false
     },
     {
@@ -37,14 +77,34 @@
       "message": "Next.js route param used in file system operation without sanitisation",
       "detail": "Route params like params.slug are user-controlled. Use path.basename() and validate against an allowed directory.",
       "cves": [
-        { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
+        {
+          "id": "CWE-22",
+          "url": "https://cwe.mitre.org/data/definitions/22.html",
+          "description": "Path Traversal"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:readFile|readFileSync|createReadStream)\\s*\\([^)]*params\\.", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "path\\.(?:join|resolve)\\s*\\([^)]*params\\.", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:readFile|readFileSync|createReadStream)\\s*\\([^)]*params\\.",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "path\\.(?:join|resolve)\\s*\\([^)]*params\\.",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["path\\.basename\\(", "normalize\\(", "allowedSlugs", "whitelist"],
-      "requiresTaint": true
+      "safeguards": [
+        "path\\.basename\\(",
+        "normalize\\(",
+        "allowedSlugs",
+        "whitelist"
+      ],
+      "requiresTaint": true,
+      "category": "path-traversal"
     },
     {
       "ruleId": "nextjs-redirect-open-redirect",
@@ -52,14 +112,34 @@
       "message": "Next.js redirect() with user-controlled URL",
       "detail": "Passing searchParams or request values to redirect() without validation enables open redirect phishing attacks.",
       "cves": [
-        { "id": "CWE-601", "url": "https://cwe.mitre.org/data/definitions/601.html", "description": "URL Redirection to Untrusted Site" }
+        {
+          "id": "CWE-601",
+          "url": "https://cwe.mitre.org/data/definitions/601.html",
+          "description": "URL Redirection to Untrusted Site"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "redirect\\s*\\([^)]*(?:searchParams|params)\\.", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "NextResponse\\.redirect\\s*\\([^)]*(?:searchParams|params)\\.", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "redirect\\s*\\([^)]*(?:searchParams|params)\\.",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "NextResponse\\.redirect\\s*\\([^)]*(?:searchParams|params)\\.",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["startsWith\\s*\\('/'\\)", "startsWith\\s*\\(\"/\"\\)", "allowedUrls", "isRelative\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "startsWith\\s*\\('/'\\)",
+        "startsWith\\s*\\(\"/\"\\)",
+        "allowedUrls",
+        "isRelative\\("
+      ],
+      "requiresTaint": true,
+      "category": "open-redirect"
     },
     {
       "ruleId": "nextjs-env-exposed-client",
@@ -67,12 +147,26 @@
       "message": "Secret environment variable potentially exposed to the client bundle",
       "detail": "Only NEXT_PUBLIC_ prefixed variables are safe in client components. Using process.env.SECRET_KEY in a Client Component leaks it to the browser.",
       "cves": [
-        { "id": "CWE-200", "url": "https://cwe.mitre.org/data/definitions/200.html", "description": "Exposure of Sensitive Information" }
+        {
+          "id": "CWE-200",
+          "url": "https://cwe.mitre.org/data/definitions/200.html",
+          "description": "Exposure of Sensitive Information"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "process\\.env\\.(?!NEXT_PUBLIC_)[A-Z_]{3,}(?:KEY|SECRET|TOKEN|PASSWORD|API|PRIVATE)\\b", "flags": "g", "context": "line" }
+        {
+          "type": "regex",
+          "match": "process\\.env\\.(?!NEXT_PUBLIC_)[A-Z_]{3,}(?:KEY|SECRET|TOKEN|PASSWORD|API|PRIVATE)\\b",
+          "flags": "g",
+          "context": "line"
+        }
       ],
-      "safeguards": ["'use server'", "\"use server\"", "getServerSideProps", "getStaticProps"],
+      "safeguards": [
+        "'use server'",
+        "\"use server\"",
+        "getServerSideProps",
+        "getStaticProps"
+      ],
       "requiresTaint": false
     },
     {
@@ -81,14 +175,33 @@
       "message": "Next.js server-side fetch with user-controlled URL",
       "detail": "Calling fetch() in a Server Component with a URL from params/searchParams enables SSRF. Validate against an allowlist of permitted hosts.",
       "cves": [
-        { "id": "CWE-918", "url": "https://cwe.mitre.org/data/definitions/918.html", "description": "Server-Side Request Forgery" }
+        {
+          "id": "CWE-918",
+          "url": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "Server-Side Request Forgery"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "fetch\\s*\\([^)]*(?:params|searchParams)\\.", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "fetch\\s*\\(\\s*`[^`]*\\$\\{(?:params|searchParams)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "fetch\\s*\\([^)]*(?:params|searchParams)\\.",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "fetch\\s*\\(\\s*`[^`]*\\$\\{(?:params|searchParams)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["allowedHosts", "ALLOWED_DOMAINS", "new URL.*hostname"],
-      "requiresTaint": true
+      "safeguards": [
+        "allowedHosts",
+        "ALLOWED_DOMAINS",
+        "new URL.*hostname"
+      ],
+      "requiresTaint": true,
+      "category": "ssrf"
     },
     {
       "ruleId": "nextjs-sql-in-server-component",
@@ -96,14 +209,34 @@
       "message": "Raw SQL with user-controlled input in Next.js route handler",
       "detail": "Template literals in SQL queries from searchParams/params allow SQL injection. Use parameterised queries.",
       "cves": [
-        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+        {
+          "id": "CWE-89",
+          "url": "https://cwe.mitre.org/data/definitions/89.html",
+          "description": "SQL Injection"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:db|sql|pool|client)\\.(?:query|execute)\\s*\\(\\s*`[^`]*\\$\\{(?:params|searchParams|formData|req\\.body)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "(?:db|sql|pool|client)\\.(?:query|execute)\\s*\\([^)]*\\+[^)]*(?:params|searchParams)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:db|sql|pool|client)\\.(?:query|execute)\\s*\\(\\s*`[^`]*\\$\\{(?:params|searchParams|formData|req\\.body)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "(?:db|sql|pool|client)\\.(?:query|execute)\\s*\\([^)]*\\+[^)]*(?:params|searchParams)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["\\$[0-9]", "\\?\\s*,", "parameterized", "prepared"],
-      "requiresTaint": true
+      "safeguards": [
+        "\\$[0-9]",
+        "\\?\\s*,",
+        "parameterized",
+        "prepared"
+      ],
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "nextjs-dangerouslysetinnerhtml",
@@ -111,12 +244,25 @@
       "message": "dangerouslySetInnerHTML with server data in Next.js component",
       "detail": "Using dangerouslySetInnerHTML with params or database content enables stored/reflected XSS. Sanitise with DOMPurify.",
       "cves": [
-        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+        {
+          "id": "CWE-79",
+          "url": "https://cwe.mitre.org/data/definitions/79.html",
+          "description": "Cross-site Scripting (XSS)"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "__html\\s*:\\s*(?!.*DOMPurify|.*sanitize)[^}]*(?:params\\.|searchParams\\.|data\\.|post\\.|content)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "__html\\s*:\\s*(?!.*DOMPurify|.*sanitize)[^}]*(?:params\\.|searchParams\\.|data\\.|post\\.|content)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["DOMPurify\\.sanitize\\(", "sanitizeHtml\\(", "sanitize\\("],
+      "safeguards": [
+        "DOMPurify\\.sanitize\\(",
+        "sanitizeHtml\\(",
+        "sanitize\\("
+      ],
       "requiresTaint": true
     },
     {
@@ -125,12 +271,25 @@
       "message": "Next.js cookie set without HttpOnly or Secure flag",
       "detail": "Cookies from cookies().set() without httpOnly and secure can be stolen via XSS or intercepted over HTTP.",
       "cves": [
-        { "id": "CWE-1004", "url": "https://cwe.mitre.org/data/definitions/1004.html", "description": "Sensitive Cookie Without HttpOnly Flag" }
+        {
+          "id": "CWE-1004",
+          "url": "https://cwe.mitre.org/data/definitions/1004.html",
+          "description": "Sensitive Cookie Without HttpOnly Flag"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "cookies\\(\\)\\.set\\s*\\((?:[^)]*,){2}\\s*\\{(?![^}]*httpOnly)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "cookies\\(\\)\\.set\\s*\\((?:[^)]*,){2}\\s*\\{(?![^}]*httpOnly)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["httpOnly\\s*:\\s*true", "secure\\s*:\\s*true"],
+      "safeguards": [
+        "httpOnly\\s*:\\s*true",
+        "secure\\s*:\\s*true"
+      ],
+      "safeguardScope": "file",
       "requiresTaint": false
     },
     {
@@ -139,13 +298,26 @@
       "message": "Next.js response header set from user-controlled value",
       "detail": "Setting response headers from searchParams or request data allows CRLF injection. Sanitise before calling headers().set().",
       "cves": [
-        { "id": "CWE-113", "url": "https://cwe.mitre.org/data/definitions/113.html", "description": "Improper Neutralization of CRLF Sequences in HTTP Headers" }
+        {
+          "id": "CWE-113",
+          "url": "https://cwe.mitre.org/data/definitions/113.html",
+          "description": "Improper Neutralization of CRLF Sequences in HTTP Headers"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:headers\\(\\)|response\\.headers)\\.set\\s*\\([^)]*(?:searchParams|params)\\.", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:headers\\(\\)|response\\.headers)\\.set\\s*\\([^)]*(?:searchParams|params)\\.",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["replace.*\\\\r|replace.*\\\\n", "encodeURIComponent\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "replace.*\\\\r|replace.*\\\\n",
+        "encodeURIComponent\\("
+      ],
+      "requiresTaint": true,
+      "category": "injection-other"
     }
   ]
 }

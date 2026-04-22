@@ -9,45 +9,107 @@
       "message": "Express app missing Helmet security headers",
       "detail": "Express does not set secure HTTP headers by default. Missing headers like Content-Security-Policy and X-Frame-Options leave the app exposed. Add helmet() as the first middleware after creating the app.",
       "cves": [
-        { "id": "CWE-693", "url": "https://cwe.mitre.org/data/definitions/693.html", "description": "Protection Mechanism Failure" }
+        {
+          "id": "CWE-693",
+          "url": "https://cwe.mitre.org/data/definitions/693.html",
+          "description": "Protection Mechanism Failure"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "const app\\s*=\\s*express\\s*\\(\\s*\\)\\s*;?(?!.*helmet)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "const app\\s*=\\s*express\\s*\\(\\s*\\)\\s*;?(?!.*helmet)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["helmet\\(", "Content-Security-Policy", "X-Frame-Options"],
+      "safeguards": [
+        "helmet\\(",
+        "Content-Security-Policy",
+        "X-Frame-Options"
+      ],
+      "safeguardScope": "file",
       "requiresTaint": false
     },
     {
       "ruleId": "express-body-parser-limit",
       "severity": "warning",
-      "message": "Express body parser missing size limit — DoS risk",
+      "message": "Express body parser missing size limit \u2014 DoS risk",
       "detail": "Without a size limit on request bodies, attackers can send arbitrarily large payloads causing memory exhaustion. Set { limit: '10mb' } or smaller on express.json().",
       "cves": [
-        { "id": "CWE-400", "url": "https://cwe.mitre.org/data/definitions/400.html", "description": "Uncontrolled Resource Consumption" }
+        {
+          "id": "CWE-400",
+          "url": "https://cwe.mitre.org/data/definitions/400.html",
+          "description": "Uncontrolled Resource Consumption"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "express\\.json\\s*\\(\\s*\\)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "express\\.urlencoded\\s*\\(\\s*\\{(?![^}]*limit)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "bodyParser\\.json\\s*\\(\\s*\\)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "express\\.json\\s*\\(\\s*\\)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "express\\.urlencoded\\s*\\(\\s*\\{(?![^}]*limit)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "bodyParser\\.json\\s*\\(\\s*\\)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["limit\\s*:", "limit\\s*="],
+      "safeguards": [
+        "limit\\s*:",
+        "limit\\s*="
+      ],
       "requiresTaint": false
     },
     {
       "ruleId": "express-sql-injection",
       "severity": "critical",
-      "message": "SQL query built from Express request data — SQL injection risk",
-      "detail": "Building SQL with Express request data allows injection. Use parameterised queries with ? or $N placeholders — never string concatenation or template literals.",
+      "message": "SQL query built from Express request data \u2014 SQL injection risk",
+      "detail": "Building SQL with Express request data allows injection. Use parameterised queries with ? or $N placeholders \u2014 never string concatenation or template literals.",
       "cves": [
-        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+        {
+          "id": "CWE-89",
+          "url": "https://cwe.mitre.org/data/definitions/89.html",
+          "description": "SQL Injection"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:query|sql)\\s*[+=]\\s*.*\\+.*req\\.(?:body|params|query)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "(?:query|sql)\\s*=\\s*`[^`]*\\$\\{\\s*req\\.(?:body|params|query)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "\\.(?:query|execute)\\s*\\(\\s*`[^`]*\\$\\{\\s*req\\.", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:query|sql)\\s*[+=]\\s*.*\\+.*req\\.(?:body|params|query)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "(?:query|sql)\\s*=\\s*`[^`]*\\$\\{\\s*req\\.(?:body|params|query)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "\\.(?:query|execute)\\s*\\(\\s*`[^`]*\\$\\{\\s*req\\.",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["\\?\\s*,", "\\$[0-9]", "parameterized", "prepared", "escape\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "\\?\\s*,",
+        "\\$[0-9]",
+        "parameterized",
+        "prepared",
+        "escape\\("
+      ],
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "express-path-traversal",
@@ -55,14 +117,34 @@
       "message": "File system operation using Express request data without sanitisation",
       "detail": "Using req.params or req.query in file operations without sanitisation allows path traversal. Use path.basename() and validate the resolved path.",
       "cves": [
-        { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
+        {
+          "id": "CWE-22",
+          "url": "https://cwe.mitre.org/data/definitions/22.html",
+          "description": "Path Traversal"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:readFile|writeFile|readFileSync|writeFileSync|createReadStream|sendFile)\\s*\\([^)]*req\\.(?:params|query|body)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "path\\.(?:join|resolve)\\s*\\([^)]*req\\.(?:params|query|body)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:readFile|writeFile|readFileSync|writeFileSync|createReadStream|sendFile)\\s*\\([^)]*req\\.(?:params|query|body)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "path\\.(?:join|resolve)\\s*\\([^)]*req\\.(?:params|query|body)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["path\\.basename\\(", "normalize\\(", "allowedPaths", "startsWith\\(baseDir"],
-      "requiresTaint": true
+      "safeguards": [
+        "path\\.basename\\(",
+        "normalize\\(",
+        "allowedPaths",
+        "startsWith\\(baseDir"
+      ],
+      "requiresTaint": true,
+      "category": "path-traversal"
     },
     {
       "ruleId": "express-command-injection",
@@ -70,14 +152,33 @@
       "message": "Shell command built from Express request data",
       "detail": "Passing req.body/params/query to exec() allows arbitrary command execution. Use spawn() with an argument array and shell:false.",
       "cves": [
-        { "id": "CWE-78", "url": "https://cwe.mitre.org/data/definitions/78.html", "description": "OS Command Injection" }
+        {
+          "id": "CWE-78",
+          "url": "https://cwe.mitre.org/data/definitions/78.html",
+          "description": "OS Command Injection"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:exec|execSync|spawn|spawnSync)\\s*\\([^)]*req\\.(?:body|params|query)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "(?:exec|execSync)\\s*\\(`[^`]*\\$\\{\\s*req\\.", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:exec|execSync|spawn|spawnSync)\\s*\\([^)]*req\\.(?:body|params|query)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "(?:exec|execSync)\\s*\\(`[^`]*\\$\\{\\s*req\\.",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["shell\\s*:\\s*false", "shellEscape\\(", "sanitize\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "shell\\s*:\\s*false",
+        "shellEscape\\(",
+        "sanitize\\("
+      ],
+      "requiresTaint": true,
+      "category": "command-injection"
     },
     {
       "ruleId": "express-ssrf",
@@ -85,14 +186,33 @@
       "message": "Express route makes HTTP request to user-controlled URL",
       "detail": "Fetching a URL from req.body/params/query exposes internal services to SSRF. Validate against an allowlist of permitted hosts.",
       "cves": [
-        { "id": "CWE-918", "url": "https://cwe.mitre.org/data/definitions/918.html", "description": "Server-Side Request Forgery" }
+        {
+          "id": "CWE-918",
+          "url": "https://cwe.mitre.org/data/definitions/918.html",
+          "description": "Server-Side Request Forgery"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:fetch|axios\\.get|axios\\.post|http\\.get|request)\\s*\\([^)]*req\\.(?:body|params|query)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "(?:fetch|axios)\\s*\\(\\s*`[^`]*\\$\\{\\s*req\\.", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "(?:fetch|axios\\.get|axios\\.post|http\\.get|request)\\s*\\([^)]*req\\.(?:body|params|query)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "(?:fetch|axios)\\s*\\(\\s*`[^`]*\\$\\{\\s*req\\.",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["allowedHosts", "ALLOWED_DOMAINS", "new URL.*hostname"],
-      "requiresTaint": true
+      "safeguards": [
+        "allowedHosts",
+        "ALLOWED_DOMAINS",
+        "new URL.*hostname"
+      ],
+      "requiresTaint": true,
+      "category": "ssrf"
     },
     {
       "ruleId": "express-open-redirect",
@@ -100,14 +220,34 @@
       "message": "Express res.redirect() with user-controlled URL",
       "detail": "Redirecting to a URL from req.query or req.body without validation enables phishing via open redirect.",
       "cves": [
-        { "id": "CWE-601", "url": "https://cwe.mitre.org/data/definitions/601.html", "description": "URL Redirection to Untrusted Site" }
+        {
+          "id": "CWE-601",
+          "url": "https://cwe.mitre.org/data/definitions/601.html",
+          "description": "URL Redirection to Untrusted Site"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "res\\.redirect\\s*\\([^)]*req\\.(?:body|params|query)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "res\\.redirect\\s*\\(`[^`]*\\$\\{\\s*req\\.", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "res\\.redirect\\s*\\([^)]*req\\.(?:body|params|query)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "res\\.redirect\\s*\\(`[^`]*\\$\\{\\s*req\\.",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["startsWith\\('/'\\)", "ALLOWED_REDIRECTS", "isRelative\\(", "allowedUrls"],
-      "requiresTaint": true
+      "safeguards": [
+        "startsWith\\('/'\\)",
+        "ALLOWED_REDIRECTS",
+        "isRelative\\(",
+        "allowedUrls"
+      ],
+      "requiresTaint": true,
+      "category": "open-redirect"
     },
     {
       "ruleId": "express-xss-response",
@@ -115,14 +255,33 @@
       "message": "Express response sends user input as HTML without encoding",
       "detail": "Writing req.body/params/query directly to res.send() can reflect XSS payloads. Encode output or use res.json().",
       "cves": [
-        { "id": "CWE-79", "url": "https://cwe.mitre.org/data/definitions/79.html", "description": "Cross-site Scripting (XSS)" }
+        {
+          "id": "CWE-79",
+          "url": "https://cwe.mitre.org/data/definitions/79.html",
+          "description": "Cross-site Scripting (XSS)"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "res\\.send\\s*\\([^)]*req\\.(?:body|params|query)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "res\\.send\\s*\\(`[^`]*\\$\\{\\s*req\\.", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "res\\.send\\s*\\([^)]*req\\.(?:body|params|query)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "res\\.send\\s*\\(`[^`]*\\$\\{\\s*req\\.",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["escapeHtml\\(", "sanitize\\(", "res\\.json\\("],
-      "requiresTaint": true
+      "safeguards": [
+        "escapeHtml\\(",
+        "sanitize\\(",
+        "res\\.json\\("
+      ],
+      "requiresTaint": true,
+      "category": "xss"
     },
     {
       "ruleId": "express-cors-wildcard",
@@ -130,13 +289,31 @@
       "message": "Express CORS configured with wildcard origin",
       "detail": "Allowing all origins with '*' exposes the API to cross-origin attacks. Restrict to specific trusted domains.",
       "cves": [
-        { "id": "CWE-942", "url": "https://cwe.mitre.org/data/definitions/942.html", "description": "Permissive Cross-domain Policy" }
+        {
+          "id": "CWE-942",
+          "url": "https://cwe.mitre.org/data/definitions/942.html",
+          "description": "Permissive Cross-domain Policy"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "cors\\s*\\(\\s*\\{[^}]*origin\\s*:\\s*['\"`]\\*['\"`]", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "cors\\s*\\(\\s*\\{[^}]*origin\\s*:\\s*true", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "cors\\s*\\(\\s*\\{[^}]*origin\\s*:\\s*['\"`]\\*['\"`]",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "cors\\s*\\(\\s*\\{[^}]*origin\\s*:\\s*true",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["origin\\s*:\\s*\\[", "origin\\s*:\\s*function", "allowedOrigins"],
+      "safeguards": [
+        "origin\\s*:\\s*\\[",
+        "origin\\s*:\\s*function",
+        "allowedOrigins"
+      ],
       "requiresTaint": false
     }
   ]

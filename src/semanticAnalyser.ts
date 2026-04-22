@@ -48,7 +48,7 @@ function rhsVars(line: string): string[] {
 
 // ─── taint sources ───────────────────────────────────────────────────────────
 
-const TAINT_SOURCES: RegExp[] = [
+export const TAINT_SOURCES: RegExp[] = [
   // JS/TS request inputs
   /\breq\.(body|params|query|headers|cookies)\b/,
   /\brequest\.(body|params|query|headers|cookies)\b/,

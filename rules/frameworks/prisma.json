@@ -9,29 +9,73 @@
       "message": "Prisma $queryRaw or $executeRaw with template literal interpolation",
       "detail": "Using $queryRaw or $executeRaw with template literal expressions that include user input bypasses Prisma's SQL injection protection. Use the tagged template literal form $queryRaw`SELECT ... WHERE id = ${id}` which auto-parameterises, or pass a Prisma.sql`` tagged template.",
       "cves": [
-        { "id": "CWE-89", "url": "https://cwe.mitre.org/data/definitions/89.html", "description": "SQL Injection" }
+        {
+          "id": "CWE-89",
+          "url": "https://cwe.mitre.org/data/definitions/89.html",
+          "description": "SQL Injection"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "\\$queryRawUnsafe\\s*\\(", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "\\$executeRawUnsafe\\s*\\(", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "\\$queryRaw\\s*\\(\\s*`[^`]*\\$\\{(?!Prisma\\.sql)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "\\$queryRawUnsafe\\s*\\(",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "\\$executeRawUnsafe\\s*\\(",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "\\$queryRaw\\s*\\(\\s*`[^`]*\\$\\{(?!Prisma\\.sql)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["Prisma\\.sql`", "\\$queryRaw`", "\\$executeRaw`"],
-      "requiresTaint": true
+      "safeguards": [
+        "Prisma\\.sql`",
+        "\\$queryRaw`",
+        "\\$executeRaw`"
+      ],
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "prisma-findmany-no-where",
       "severity": "warning",
-      "message": "Prisma findMany() without a where clause — potential data exposure",
+      "message": "Prisma findMany() without a where clause \u2014 potential data exposure",
       "detail": "Calling findMany() without a where clause returns all records. In a multi-tenant application this can expose data belonging to other users. Always filter by the authenticated user's ID or tenant ID.",
       "cves": [
-        { "id": "CWE-284", "url": "https://cwe.mitre.org/data/definitions/284.html", "description": "Improper Access Control" }
+        {
+          "id": "CWE-284",
+          "url": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "Improper Access Control"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "\\.findMany\\s*\\(\\s*\\)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "\\.findMany\\s*\\(\\s*\\{(?![^}]*where)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "\\.findMany\\s*\\(\\s*\\)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "\\.findMany\\s*\\(\\s*\\{(?![^}]*where)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["where\\s*:", "userId\\s*:", "tenantId\\s*:", "organizationId\\s*:"],
+      "safeguards": [
+        "where\\s*:",
+        "userId\\s*:",
+        "tenantId\\s*:",
+        "organizationId\\s*:"
+      ],
+      "safeguardScope": "file",
       "requiresTaint": false
     },
     {
@@ -40,42 +84,88 @@
       "message": "Prisma include or select built from user-controlled input",
       "detail": "Allowing users to control which relations are included in a query can expose sensitive related data or enable denial-of-service via deeply nested includes. Whitelist permitted fields.",
       "cves": [
-        { "id": "CWE-284", "url": "https://cwe.mitre.org/data/definitions/284.html", "description": "Improper Access Control" }
+        {
+          "id": "CWE-284",
+          "url": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "Improper Access Control"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "include\\s*:\\s*(?:req\\.|body\\.|params\\.|query\\.)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "select\\s*:\\s*(?:req\\.|body\\.|params\\.|query\\.)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "include\\s*:\\s*(?:req\\.|body\\.|params\\.|query\\.)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "select\\s*:\\s*(?:req\\.|body\\.|params\\.|query\\.)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["ALLOWED_INCLUDES", "allowedFields", "whitelist", "pick\\("],
+      "safeguards": [
+        "ALLOWED_INCLUDES",
+        "allowedFields",
+        "whitelist",
+        "pick\\("
+      ],
       "requiresTaint": true
     },
     {
       "ruleId": "prisma-delete-without-where",
       "severity": "critical",
-      "message": "Prisma deleteMany() without where clause — mass deletion risk",
+      "message": "Prisma deleteMany() without where clause \u2014 mass deletion risk",
       "detail": "Calling deleteMany() without a where clause deletes every record in the table. Always provide a specific where clause to limit scope.",
       "cves": [
-        { "id": "CWE-284", "url": "https://cwe.mitre.org/data/definitions/284.html", "description": "Improper Access Control" }
+        {
+          "id": "CWE-284",
+          "url": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "Improper Access Control"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "\\.deleteMany\\s*\\(\\s*\\)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "\\.deleteMany\\s*\\(\\s*\\{(?![^}]*where)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "\\.deleteMany\\s*\\(\\s*\\)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "\\.deleteMany\\s*\\(\\s*\\{(?![^}]*where)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["where\\s*:"],
+      "safeguards": [
+        "where\\s*:"
+      ],
       "requiresTaint": false
     },
     {
       "ruleId": "prisma-update-without-where",
       "severity": "warning",
-      "message": "Prisma updateMany() without where clause — mass update risk",
+      "message": "Prisma updateMany() without where clause \u2014 mass update risk",
       "detail": "Calling updateMany() without a where clause updates every record. Always provide a specific where clause.",
       "cves": [
-        { "id": "CWE-284", "url": "https://cwe.mitre.org/data/definitions/284.html", "description": "Improper Access Control" }
+        {
+          "id": "CWE-284",
+          "url": "https://cwe.mitre.org/data/definitions/284.html",
+          "description": "Improper Access Control"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "\\.updateMany\\s*\\(\\s*\\{(?![^}]*where)", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "\\.updateMany\\s*\\(\\s*\\{(?![^}]*where)",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["where\\s*:"],
+      "safeguards": [
+        "where\\s*:"
+      ],
       "requiresTaint": false
     },
     {
@@ -84,13 +174,33 @@
       "message": "Prisma create() with unvalidated request body spread",
       "detail": "Spreading the entire request body into a Prisma create() call allows attackers to set fields they shouldn't (e.g. isAdmin, role, balance). Explicitly list permitted fields.",
       "cves": [
-        { "id": "CWE-915", "url": "https://cwe.mitre.org/data/definitions/915.html", "description": "Improperly Controlled Modification of Object Attributes" }
+        {
+          "id": "CWE-915",
+          "url": "https://cwe.mitre.org/data/definitions/915.html",
+          "description": "Improperly Controlled Modification of Object Attributes"
+        }
       ],
       "patterns": [
-        { "type": "regex", "match": "\\.create\\s*\\(\\s*\\{\\s*data\\s*:\\s*(?:req\\.body|body|\\.\\.\\.[^}]*body)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "\\.create\\s*\\(\\s*\\{\\s*data\\s*:\\s*\\{\\s*\\.\\.\\.", "flags": "gi", "context": "line" }
+        {
+          "type": "regex",
+          "match": "\\.create\\s*\\(\\s*\\{\\s*data\\s*:\\s*(?:req\\.body|body|\\.\\.\\.[^}]*body)",
+          "flags": "gi",
+          "context": "line"
+        },
+        {
+          "type": "regex",
+          "match": "\\.create\\s*\\(\\s*\\{\\s*data\\s*:\\s*\\{\\s*\\.\\.\\.",
+          "flags": "gi",
+          "context": "line"
+        }
       ],
-      "safeguards": ["pick\\(", "omit\\(", "z\\.object\\(", "schema\\.parse\\(", "validate\\("],
+      "safeguards": [
+        "pick\\(",
+        "omit\\(",
+        "z\\.object\\(",
+        "schema\\.parse\\(",
+        "validate\\("
+      ],
       "requiresTaint": true
     }
   ]

@@ -36,11 +36,11 @@ The panel has four actions:
 
 **Re-scan File** — runs a full analysis of the entire active file, not just the last paste. Before scanning it strips any existing ignore comments so previously suppressed lines are re-evaluated from scratch. Useful after you've made fixes and want a clean read.
 
-**AI Fix Suggestions** — sends all current findings, along with the relevant lines of code for context, to the Anthropic API and displays fix proposals inline in the panel. If you haven't added an API key under `shieldprompt.aiFixApiKey`, it falls back to copying a ready-made prompt to your clipboard so you can paste it into any AI assistant manually.
+**AI Fix Suggestions** — sends all current findings, along with the relevant lines of code for context, to the Anthropic API and displays fix proposals inline in the panel. To enable it, run **ShieldPrompt: Set AI Fix API key** from the command palette — your key is stored in the OS keychain (macOS Keychain, Windows Credential Manager, Linux libsecret), never in `settings.json`. If no key is set, the button falls back to copying a ready-made prompt to your clipboard so you can paste it into any AI assistant manually.
 
 **Scan Project** — runs the full rule set against every file in the workspace and shows results grouped by file. Respects `.gitignore`.
 
-**Ignore on this line** — available on each individual finding. Adds a `// shieldprompt-ignore: <rule-id>` comment to that line and removes the gutter marker. The suppression is per-line and per-rule, so it won't hide other findings on the same line. Re-scan File will clear these comments and re-evaluate everything fresh.
+**Ignore on this line** — available on each individual finding. Hides the finding in the panel without modifying your file. Re-scan File or pasting the same code again will bring the finding back, so nothing is silently lost.
 
 ---
 
@@ -51,8 +51,10 @@ The panel has four actions:
 | `shieldprompt.enabled` | `true` | Enable or disable analysis on paste |
 | `shieldprompt.minLines` | `3` | Minimum pasted lines to trigger analysis |
 | `shieldprompt.suppressedRules` | `[]` | Rule IDs to suppress across the whole workspace |
-| `shieldprompt.aiFixApiKey` | `""` | Anthropic API key for AI Fix Suggestions |
 | `shieldprompt.aiFixModel` | `claude-haiku-4-5-20251001` | Model used for AI Fix Suggestions |
+| `shieldprompt.projectScanFileLimit` | `1000` | Maximum files the `Scan Project` command visits. Subsequent scans reuse a per-file mtime cache, so raising this is usually cheap |
+
+The Anthropic API key is **not** a setting — it's stored in the OS keychain via VSCode's `SecretStorage`. Set or clear it with the commands below.
 
 ---
 
@@ -63,6 +65,9 @@ The panel has four actions:
 - `ShieldPrompt: Reset suppressed rules` — Clear all workspace-level suppressions
 - `ShieldPrompt: Scan Project` — Run analysis across the full project
 - `ShieldPrompt: Check for rule updates` — Pull the latest rule definitions
+- `ShieldPrompt: Set AI Fix API key` — Store your Anthropic key in the OS keychain
+- `ShieldPrompt: Clear AI Fix API key` — Remove the stored key
+- `ShieldPrompt: Clear project scan cache` — Invalidate all cached per-file scan results for the current workspace
 
 ---
 
