@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.1.2
+
+### Fixes (reduce false positives without hurting detection)
+- **Findings inside comments are no longer reported.** A rule regex matching a keyword (e.g. `sha1`, `eval`) inside an explanatory comment used to fire on every scan. The new AST layer tokenizes the source, identifies comment byte ranges (respecting strings and template literals), and drops any finding whose position falls inside one. Enabled by default via `shieldprompt.astLayer` — set to `false` to restore pre-1.1.2 behaviour.
+- **Findings inside string literals are dropped too, except for credential rules.** Matches like `"please don't use eval()"` or `"avoid SELECT * FROM users with string concat"` no longer false-positive. Credential-style rules (AWS/Stripe keys, JWT tokens, hardcoded secrets) are explicitly exempt because their findings live *inside* strings by definition.
+- **Template literals with `${}` interpolation are correctly treated as part-code**, so SQL injection via `` db.query(`SELECT * FROM u WHERE id = ${req.body.id}`) `` is still detected.
+- **`dangerous-alias` no longer misfires on strings** that happen to contain the word `eval`. Rule now strips string literals from the RHS before checking.
+- **Test / fixture / mock files skip noisy rules by default.** Paths matching `__tests__/`, `test/`, `spec/`, `fixtures/`, `*.test.*`, `*_test.py`, `conftest.py`, etc. suppress behaviour-class findings but keep credential leak detection. Controlled by `shieldprompt.skipNoisyInTests`.
+
+### New settings
+- `shieldprompt.astLayer` (default `true`) — comment + string filtering.
+- `shieldprompt.skipNoisyInTests` (default `true`) — test-file FP reduction.
+- `shieldprompt.minSeverity` (`"warning"` | `"critical"`, default `"warning"`) — hide `warning`-severity findings to further reduce noise. Credential leaks are always shown regardless.
+
+### Infrastructure
+- **Coverage + FP audit suite** — 42 fixture cases covering SQL injection, command injection, eval, hardcoded secrets, XSS, weak crypto, path traversal, SSRF, insecure deserialization, open redirect, insecure randomness, plus 10+ intentional FP scenarios (help strings mentioning `eval`, log lines mentioning `SELECT`, JSDoc comments, etc.). Serves as a regression net for future rule changes.
+- Test suite grew to 142 tests across 8 files.
+
 ## 1.1.0
 
 ### Security

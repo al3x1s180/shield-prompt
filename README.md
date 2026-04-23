@@ -53,6 +53,9 @@ The panel has four actions:
 | `shieldprompt.suppressedRules` | `[]` | Rule IDs to suppress across the whole workspace |
 | `shieldprompt.aiFixModel` | `claude-haiku-4-5-20251001` | Model used for AI Fix Suggestions |
 | `shieldprompt.projectScanFileLimit` | `1000` | Maximum files the `Scan Project` command visits. Subsequent scans reuse a per-file mtime cache, so raising this is usually cheap |
+| `shieldprompt.astLayer` | `true` | Drop findings whose position falls inside a comment or string literal (credential rules exempt). Template literals with `${}` are treated as code, so SQL injection via interpolation is still caught. Supported: JS/TS, Python |
+| `shieldprompt.skipNoisyInTests` | `true` | In test / fixture / mock files, drop behaviour findings (eval, SQL concat, etc.) but keep credential findings. Detected via path patterns like `__tests__/`, `*.test.*`, `*_test.py`, `conftest.py` |
+| `shieldprompt.minSeverity` | `"warning"` | `"warning"` (default) shows everything; `"critical"` hides warning-severity findings to reduce noise. Credential leaks always shown regardless |
 
 The Anthropic API key is **not** a setting — it's stored in the OS keychain via VSCode's `SecretStorage`. Set or clear it with the commands below.
 

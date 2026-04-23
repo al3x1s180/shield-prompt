@@ -132,6 +132,19 @@ const DANGEROUS_ALIAS_SOURCES = [
   /window\s*\[\s*['"]ev['"]\s*\+\s*['"]al['"]\s*\]/,
 ];
 
+// Strips string literals from a single-line expression so that tokens
+// appearing *inside* strings (e.g. "please don't use eval()") aren't
+// matched by the alias-source regexes. Used by dangerous-alias to avoid
+// the classic FP where a help/error string contains the word "eval".
+// Template literals without `${}` are stripped; those with interpolation
+// are left intact because they can hide real dangerous expressions.
+function stripStringsForAliasCheck(s: string): string {
+  return s
+    .replace(/"(?:\\.|[^"\\])*"/g, '""')
+    .replace(/'(?:\\.|[^'\\])*'/g, "''")
+    .replace(/`(?![^`]*\$\{)(?:\\.|[^`\\])*`/g, "``");
+}
+
 // ─── insecure defaults ────────────────────────────────────────────────────────
 interface InsecureDefault {
   re: RegExp; ruleId: string; message: string; detail: string;
@@ -347,7 +360,7 @@ const rules: RuleDef[] = [
       // Detect alias assignment on this line
       const am = /(?:const|let|var)\s+([a-zA-Z_$][\w$]*)\s*=/.exec(line);
       if (am) {
-        const rhs = line.slice(line.indexOf("=") + 1);
+        const rhs = stripStringsForAliasCheck(line.slice(line.indexOf("=") + 1));
         if (DANGEROUS_ALIAS_SOURCES.some(s => s.test(rhs))) {
           findings.push({ line: lineIndex, col: am.index, severity: "critical", ruleId: this.ruleId, message: `'${am[1]}' assigned a dangerous function reference`, detail: this.detail, cves: this.cves });
         }
@@ -357,7 +370,7 @@ const rules: RuleDef[] = [
       for (const prev of lookback) {
         const pm = /(?:const|let|var)\s+([a-zA-Z_$][\w$]*)\s*=/.exec(prev);
         if (!pm) continue;
-        const rhs = prev.slice(prev.indexOf("=") + 1);
+        const rhs = stripStringsForAliasCheck(prev.slice(prev.indexOf("=") + 1));
         if (!DANGEROUS_ALIAS_SOURCES.some(s => s.test(rhs))) continue;
         const alias = pm[1];
         const callRe = new RegExp(`\\b${alias}\\s*\\(`, "g");

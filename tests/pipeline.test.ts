@@ -68,4 +68,31 @@ describe("analyseAllLayers — end-to-end pipeline", () => {
     // At least as many findings (probably more) when the framework is active.
     expect(withDep.length).toBeGreaterThanOrEqual(without.length);
   });
+
+  // Regression guard for the exact FP found during the 1.1.0 smoke test:
+  // a "sha1" literal in an explanatory comment was firing the weak-hash rule.
+  describe("astLayer flag", () => {
+    const src = `// Expected findings: crypto-sha1 (warning)\nconst hash = crypto.createHash("sha1");`;
+
+    it("flag OFF = existing behaviour (match in comment is preserved)", () => {
+      const findings    = analyseAllLayers(src, "javascript", 0, [], new Set(), rules);
+      const onCommentLine = findings.filter((f) => f.line === 0);
+      expect(onCommentLine.length).toBeGreaterThan(0);
+    });
+
+    it("flag ON drops the comment-line match but keeps the real one", () => {
+      const findings      = analyseAllLayers(src, "javascript", 0, [], new Set(), rules, { astLayer: true });
+      const onCommentLine = findings.filter((f) => f.line === 0);
+      const onCodeLine    = findings.filter((f) => f.line === 1);
+      expect(onCommentLine.length).toBe(0);
+      expect(onCodeLine.length).toBeGreaterThan(0);
+    });
+
+    it("flag ON is a no-op on snippets with no comments", () => {
+      const plain    = `const hash = crypto.createHash("sha1");`;
+      const without  = analyseAllLayers(plain, "javascript", 0, [], new Set(), rules);
+      const withFlag = analyseAllLayers(plain, "javascript", 0, [], new Set(), rules, { astLayer: true });
+      expect(withFlag.map((f) => f.ruleId)).toEqual(without.map((f) => f.ruleId));
+    });
+  });
 });

@@ -11,6 +11,38 @@ import {
   getFrameworkRules,
   categoryDedup,
 } from "./ruleLoader";
+import { filterFindingsInNonCode, isCredentialRule } from "./astLayer";
+import { filterFindingsForTestFile } from "./testFileHeuristic";
+
+const SEV_WEIGHT: Record<string, number> = { critical: 0, warning: 1, info: 2 };
+
+function filterBySeverity<T extends Finding>(
+  findings: T[],
+  minSeverity: "critical" | "warning" | "info"
+): T[] {
+  const threshold = SEV_WEIGHT[minSeverity] ?? 1;
+  return findings.filter((f) => {
+    // Credential findings are always kept — leaked secrets are never "too
+    // minor to show".
+    if (isCredentialRule(f.ruleId)) return true;
+    const weight = SEV_WEIGHT[f.severity] ?? 3;
+    return weight <= threshold;
+  });
+}
+
+export interface AnalyseOptions {
+  // Drops findings whose match position falls inside a comment or string
+  // literal (credential rules exempt). Controlled by shieldprompt.astLayer.
+  astLayer?: boolean;
+  // When set AND the path matches a test-file pattern, drops all findings
+  // except credential rules. Controlled by shieldprompt.skipNoisyInTests.
+  filePath?: string;
+  skipNoisyInTests?: boolean;
+  // Hides findings below the given severity (warning | info). Credential
+  // rules are always kept regardless of severity. Default "warning" = show
+  // everything. Setting to "critical" = show only critical + credential.
+  minSeverity?: "critical" | "warning" | "info";
+}
 
 // Runs every layer of analysis (hardcoded static, hardcoded semantic, JSON
 // language rules, JSON framework rules), merges with dedup on line+ruleId,
@@ -23,7 +55,8 @@ export function analyseAllLayers(
   startLine: number,
   suppressed: string[],
   deps: Set<string>,
-  rules: LoadedRules | undefined
+  rules: LoadedRules | undefined,
+  options: AnalyseOptions = {}
 ): Finding[] {
   const staticFindings   = analyse(text, languageId, startLine, suppressed, deps);
   const semanticFindings = semanticAnalyse(text, languageId, startLine, suppressed);
@@ -55,9 +88,40 @@ export function analyseAllLayers(
 
   const deduped = categoryDedup(merged);
 
-  const sevWeight: Record<string, number> = { critical: 0, warning: 1, info: 2 };
-  deduped.sort((a, b) =>
-    a.line !== b.line ? a.line - b.line : (sevWeight[a.severity] ?? 3) - (sevWeight[b.severity] ?? 3)
+  // AST layer: when enabled, drop findings whose position falls inside a
+  // comment or inside a string literal. Credential-like rules (hardcoded
+  // secrets, tokens, API keys) are exempt from the string filter because
+  // those findings are meaningful inside strings by definition. Runs AFTER
+  // dedup so cross-layer collapsing is not affected. On any tokenizer error,
+  // fall back to the un-filtered list so the layer can never make the
+  // pipeline worse than before.
+  let final = deduped;
+  if (options.astLayer) {
+    try {
+      final = filterFindingsInNonCode(text, languageId, deduped);
+    } catch {
+      final = deduped;
+    }
+  }
+
+  // Test-file skip: for files under test/ spec/ fixtures/ etc., drop
+  // behavior-class findings. Credential findings are preserved.
+  if (options.skipNoisyInTests && options.filePath) {
+    try {
+      final = filterFindingsForTestFile(options.filePath, final);
+    } catch {
+      // keep `final` as-is
+    }
+  }
+
+  // Severity cap — drops findings below the configured minimum, except
+  // credential leaks which are always shown.
+  if (options.minSeverity) {
+    final = filterBySeverity(final, options.minSeverity);
+  }
+
+  final.sort((a, b) =>
+    a.line !== b.line ? a.line - b.line : (SEV_WEIGHT[a.severity] ?? 3) - (SEV_WEIGHT[b.severity] ?? 3)
   );
-  return deduped;
+  return final;
 }

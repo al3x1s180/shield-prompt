@@ -78,9 +78,13 @@ async function runRescan(): Promise<void> {
   const config     = vscode.workspace.getConfiguration("shieldprompt");
   const suppressed = config.get<string[]>("suppressedRules", []);
 
-  const projectDeps = await readProjectDeps();
+  const projectDeps      = await readProjectDeps();
+  const astLayer         = config.get<boolean>("astLayer", true);
+  const skipNoisyInTests = config.get<boolean>("skipNoisyInTests", true);
+  const minSeverity      = config.get<"critical" | "warning">("minSeverity", "warning");
   const merged = analyseAllLayers(
-    text, languageId, 0, suppressed, projectDeps.dependencies, loadedRules
+    text, languageId, 0, suppressed, projectDeps.dependencies, loadedRules,
+    { astLayer, skipNoisyInTests, minSeverity, filePath: editor.document.uri.fsPath }
   );
 
   const fp           = fingerprint(text);
@@ -222,15 +226,21 @@ export function activate(context: vscode.ExtensionContext): void {
         async () => {
           const config     = vscode.workspace.getConfiguration("shieldprompt");
           const suppressed = config.get<string[]>("suppressedRules", []);
-          const fileLimit  = config.get<number>("projectScanFileLimit", 1000);
-          const rootPath   = folders[0].uri.fsPath;
-          const projectDeps = await readProjectDeps();
+          const fileLimit        = config.get<number>("projectScanFileLimit", 1000);
+          const astLayer         = config.get<boolean>("astLayer", true);
+          const skipNoisyInTests = config.get<boolean>("skipNoisyInTests", true);
+          const minSeverity      = config.get<"critical" | "warning">("minSeverity", "warning");
+          const rootPath         = folders[0].uri.fsPath;
+          const projectDeps      = await readProjectDeps();
 
           const results = await runProjectScan(rootPath, suppressed, loadedRules, {
             cache: projectScanCache,
             ruleVersion: hashRulePack(loadedRules),
             fileLimit,
             deps: projectDeps.dependencies,
+            astLayer,
+            skipNoisyInTests,
+            minSeverity,
           });
 
           const scanPanel = vscode.window.createWebviewPanel(
@@ -349,9 +359,13 @@ export function activate(context: vscode.ExtensionContext): void {
     lastScannedDocument = document;
 
     void readProjectDeps().then((projectDeps) => {
-      const suppressed = config.get<string[]>("suppressedRules", []);
+      const suppressed       = config.get<string[]>("suppressedRules", []);
+      const astLayer         = config.get<boolean>("astLayer", true);
+      const skipNoisyInTests = config.get<boolean>("skipNoisyInTests", true);
+      const minSeverity      = config.get<"critical" | "warning">("minSeverity", "warning");
       const merged = analyseAllLayers(
-        text, languageId, range.start.line, suppressed, projectDeps.dependencies, loadedRules
+        text, languageId, range.start.line, suppressed, projectDeps.dependencies, loadedRules,
+        { astLayer, skipNoisyInTests, minSeverity, filePath: document.uri.fsPath }
       );
 
       const fp           = fingerprint(text);

@@ -101,8 +101,23 @@ describe("runProjectScan — caching", () => {
     });
     const afterEntry = cache.get(path.join(tmpRoot, "a.js"));
 
-    expect(beforeEntry?.ruleVersion).toBe("v1");
-    expect(afterEntry?.ruleVersion).toBe("v2");
+    // astLayer is folded into the stored ruleVersion so toggling the flag
+    // invalidates the cache; the caller-supplied base version is still the prefix.
+    expect(beforeEntry?.ruleVersion.startsWith("v1")).toBe(true);
+    expect(afterEntry?.ruleVersion.startsWith("v2")).toBe(true);
+  });
+
+  it("invalidates when the astLayer flag toggles", async () => {
+    writeFile("a.js", "const x = 1;\n");
+    const cache = new InMemoryScanCache();
+
+    await runProjectScan(tmpRoot, [], rules, { cache, ruleVersion: "v1", astLayer: false });
+    const before = cache.get(path.join(tmpRoot, "a.js"));
+    expect(before?.ruleVersion).toContain("ast:false");
+
+    await runProjectScan(tmpRoot, [], rules, { cache, ruleVersion: "v1", astLayer: true });
+    const after = cache.get(path.join(tmpRoot, "a.js"));
+    expect(after?.ruleVersion).toContain("ast:true");
   });
 
   it("applies suppression AFTER the cache lookup (cache entries stay valid)", async () => {

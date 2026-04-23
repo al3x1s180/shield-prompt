@@ -65,6 +65,9 @@ export interface ProjectScanOptions {
   ruleVersion?: string;
   fileLimit?: number;
   deps?: Set<string>;
+  astLayer?: boolean;
+  skipNoisyInTests?: boolean;
+  minSeverity?: "critical" | "warning" | "info";
   onProgress?: (scanned: number, total: number, cached: number) => void;
 }
 
@@ -146,7 +149,10 @@ async function discoverFiles(rootPath: string, fileLimit: number): Promise<strin
 async function scanOne(
   filePath: string,
   deps: Set<string>,
-  rules: LoadedRules | undefined
+  rules: LoadedRules | undefined,
+  astLayer: boolean,
+  skipNoisyInTests: boolean,
+  minSeverity: "critical" | "warning" | "info" | undefined
 ): Promise<Finding[]> {
   let text: string;
   try { text = await fs.promises.readFile(filePath, "utf8"); }
@@ -156,7 +162,8 @@ async function scanOne(
   // Pass an empty suppressed list here — suppression is applied in
   // runProjectScan after the cache lookup so cached entries stay valid when
   // the user toggles a suppressed rule.
-  return analyseAllLayers(text, languageId, 0, [], deps, rules);
+  return analyseAllLayers(text, languageId, 0, [], deps, rules,
+    { astLayer, skipNoisyInTests, minSeverity, filePath });
 }
 
 export async function runProjectScan(
@@ -165,9 +172,12 @@ export async function runProjectScan(
   rules?: LoadedRules,
   options: ProjectScanOptions = {}
 ): Promise<ProjectScanResult[]> {
-  const fileLimit   = options.fileLimit ?? DEFAULT_FILE_LIMIT;
-  const cache       = options.cache;
-  const ruleVersion = options.ruleVersion ?? hashRulePack(rules);
+  const fileLimit    = options.fileLimit ?? DEFAULT_FILE_LIMIT;
+  const cache        = options.cache;
+  const baseVersion  = options.ruleVersion ?? hashRulePack(rules);
+  // Fold behaviour flags into the cache key so toggling them invalidates
+  // entries computed under the opposite setting.
+  const ruleVersion  = `${baseVersion}|ast:${options.astLayer ?? false}|tests:${options.skipNoisyInTests ?? false}`;
 
   const files        = await discoverFiles(rootPath, fileLimit);
   const deps         = options.deps ?? new Set<string>();
@@ -214,7 +224,12 @@ export async function runProjectScan(
         return { file: filePath, findings: applySuppress(entry.findings) };
       }
 
-      const findings = await scanOne(filePath, deps, rules);
+      const findings = await scanOne(
+        filePath, deps, rules,
+        options.astLayer ?? false,
+        options.skipNoisyInTests ?? false,
+        options.minSeverity
+      );
       if (cache) {
         await cache.set(filePath, { mtimeMs, ruleVersion, depsHash, findings });
       }
