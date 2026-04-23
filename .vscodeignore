@@ -7,3 +7,4 @@ node_modules/**
 .gitignore
 esbuild.js
 tsconfig.json
+rules/**
