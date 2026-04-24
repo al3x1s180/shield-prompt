@@ -13,10 +13,15 @@
       "patterns": [
         { "type": "regex", "match": "(?:mysql_query|mysqli_query)\\s*\\([^)]*\\$_(?:GET|POST|REQUEST|COOKIE)", "flags": "gi", "context": "line" },
         { "type": "regex", "match": "\"\\s*(?:SELECT|INSERT|UPDATE|DELETE).*\"\\s*\\.\\s*\\$_(?:GET|POST|REQUEST)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "->query\\s*\\([^)]*\\$_(?:GET|POST|REQUEST|COOKIE)", "flags": "gi", "context": "line" }
+        { "type": "regex", "match": "->query\\s*\\([^)]*\\$_(?:GET|POST|REQUEST|COOKIE)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\"\\s*(?:SELECT|INSERT|UPDATE|DELETE)\\b[^\"]*\"\\s*\\.\\s*\\$[a-zA-Z_]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:mysql_query|mysqli_query|->query)\\s*\\([^)]*\"[^\"]*(?:SELECT|INSERT|UPDATE|DELETE)\\b[^\"]*\"\\s*\\.\\s*\\$", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\"[^\"]*\\b(?:SELECT|INSERT|UPDATE|DELETE|DROP)\\b[^\"]*\\$[a-zA-Z_][\\w]*[^\"]*\"", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "->query\\s*\\(\\s*\\$[a-zA-Z_][\\w]*\\s*\\)", "flags": "gi", "context": "line" }
       ],
-      "safeguards": ["->prepare\\s*\\(", "bindParam\\(", "bindValue\\(", "real_escape_string\\(", "PDO::quote"],
-      "requiresTaint": true
+      "safeguards": ["->prepare\\s*\\(", "bindParam\\(", "bindValue\\(", "PDO::quote"],
+      "requiresTaint": true,
+      "category": "sql-injection"
     },
     {
       "ruleId": "xss",
@@ -29,10 +34,14 @@
       "patterns": [
         { "type": "regex", "match": "(?:echo|print)\\s+\\$_(?:GET|POST|REQUEST|COOKIE|SERVER)", "flags": "gi", "context": "line" },
         { "type": "regex", "match": "(?:echo|print)\\s+.*\\$_(?:GET|POST|REQUEST)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "=\\s*\\$_(?:GET|POST|REQUEST)\\[.*\\]\\s*;\\s*$", "flags": "gim", "context": "line" }
+        { "type": "regex", "match": "=\\s*\\$_(?:GET|POST|REQUEST)\\[.*\\]\\s*;\\s*$", "flags": "gim", "context": "line" },
+        { "type": "regex", "match": "\\.\\s*\\$_(?:GET|POST|REQUEST|COOKIE)\\[", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\$\\w+\\s*\\.?=\\s*['\"][^'\"]*['\"]\\s*\\.\\s*\\$_(?:GET|POST|REQUEST|COOKIE)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "\\$\\w+\\s*\\.?=\\s*\"[^\"]*<[^\"]*\\{?\\$\\w+\\}?[^\"]*\"", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["htmlspecialchars\\(", "htmlentities\\(", "strip_tags\\(", "filter_input\\("],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "xss"
     },
     {
       "ruleId": "command-injection",
@@ -44,10 +53,13 @@
       ],
       "patterns": [
         { "type": "regex", "match": "(?:system|exec|passthru|shell_exec|popen|proc_open)\\s*\\([^)]*\\$_(?:GET|POST|REQUEST)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "`[^`]*\\$_(?:GET|POST|REQUEST)", "flags": "gi", "context": "line" }
+        { "type": "regex", "match": "`[^`]*\\$_(?:GET|POST|REQUEST)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:system|exec|passthru|shell_exec|popen|proc_open)\\s*\\(\\s*['\"][^'\"]*['\"]\\s*\\.\\s*\\$[a-zA-Z_]", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:system|exec|passthru|shell_exec|popen|proc_open)\\s*\\(\\s*\"[^\"]*\\$[a-zA-Z_]\\w*[^\"]*\"", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["escapeshellarg\\(", "escapeshellcmd\\("],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "command-injection"
     },
     {
       "ruleId": "file-inclusion",
@@ -59,10 +71,12 @@
       ],
       "patterns": [
         { "type": "regex", "match": "(?:include|require|include_once|require_once)\\s*[^;]*\\$_(?:GET|POST|REQUEST|COOKIE)", "flags": "gi", "context": "line" },
-        { "type": "regex", "match": "(?:include|require)\\s*\\([^)]*\\$_(?:GET|POST|REQUEST)", "flags": "gi", "context": "line" }
+        { "type": "regex", "match": "(?:include|require)\\s*\\([^)]*\\$_(?:GET|POST|REQUEST)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:include|require|include_once|require_once)\\s*\\(?\\s*\\$[a-zA-Z_][\\w]*", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["basename\\(", "realpath\\(", "whitelist", "in_array"],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "path-traversal"
     },
     {
       "ruleId": "path-traversal",
@@ -73,10 +87,12 @@
         { "id": "CWE-22", "url": "https://cwe.mitre.org/data/definitions/22.html", "description": "Path Traversal" }
       ],
       "patterns": [
-        { "type": "regex", "match": "(?:fopen|file_get_contents|readfile|file)\\s*\\([^)]*\\$_(?:GET|POST|REQUEST)", "flags": "gi", "context": "line" }
+        { "type": "regex", "match": "(?:fopen|file_get_contents|readfile|file)\\s*\\([^)]*\\$_(?:GET|POST|REQUEST)", "flags": "gi", "context": "line" },
+        { "type": "regex", "match": "(?:fopen|file_get_contents|readfile|move_uploaded_file)\\s*\\(\\s*\\$[a-zA-Z_][\\w]*", "flags": "gi", "context": "line" }
       ],
       "safeguards": ["realpath\\(", "basename\\(", "str_replace\\s*\\(\\.\\.", "preg_replace.*\\.\\./"],
-      "requiresTaint": true
+      "requiresTaint": true,
+      "category": "path-traversal"
     },
     {
       "ruleId": "hardcoded-secret",

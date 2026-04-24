@@ -66,6 +66,17 @@ export const TAINT_SOURCES: RegExp[] = [
   /\bos\.getenv\s*\(/,
   /\bsys\.argv\b/,
   /\bgetenv\s*\(/,
+  // PHP superglobals
+  /\$_(?:GET|POST|REQUEST|COOKIE|FILES|SERVER|SESSION)\b/,
+  /\bfile_get_contents\s*\(\s*['"]php:\/\/input/,
+  // Ruby request inputs (Rails / Sinatra)
+  /\bparams\[:/,
+  /\brequest\.(?:params|query_parameters|body|env)\b/,
+  // Go request inputs
+  /\br\.(?:FormValue|PostFormValue|URL\.Query|Header\.Get)\s*\(/,
+  // Java servlet inputs
+  /\brequest\.getParameter\s*\(/,
+  /\brequest\.getQueryString\s*\(/,
   // Generic
   /\bformData\b/,
   /\bevent\.data\b/,

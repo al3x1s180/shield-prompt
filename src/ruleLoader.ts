@@ -228,7 +228,11 @@ export interface JsonFinding extends Finding {
   framework?: string;
 }
 
-const TAINT_WINDOW = 10;
+// ±20 lines — strikes a balance between missing taint flow across short
+// helper-variable chains (common in real code: taint source → one or two
+// str_replace / trim / intval steps → sink) and over-firing when a sink
+// happens to share a file with an unrelated taint source.
+const TAINT_WINDOW = 20;
 
 function lineHasTaintSource(line: string): boolean {
   return TAINT_SOURCES.some((re) => re.test(line));

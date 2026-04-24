@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.1.7
+
+### Coverage (real-world benchmark)
+- **DVWA ground-truth audit**: baseline was 1/15 (7%) canonical vulnerabilities caught. After rule cleanup on PHP + taint-source widening + taint-window tuning, it's now **11/15 (73%)**. The 4 remaining misses are genuine cross-file vulnerabilities (source file has taint, sink is in a different file) — out of scope for per-file analysis.
+- **Taint window raised from ±10 lines to ±20.** Real code often has 3-4 intermediate helper operations between user-input assignment and the sink (`trim`, `str_replace`, `intval`, etc.). The wider window catches these without measurable FP increase on the fixture corpus.
+- **Taint sources expanded**: added PHP superglobals (`$_GET/POST/REQUEST/COOKIE/FILES/SERVER/SESSION`, `php://input`), Ruby (`params[:`, `request.params`), Go (`r.FormValue`, `r.URL.Query`), Java servlets (`request.getParameter`). Previously, PHP rules with `requiresTaint: true` never fired because no PHP source was recognised.
+- **PHP rule cleanup** — sql-injection, xss, command-injection, file-inclusion, path-traversal patterns now recognise PHP-style string interpolation (`"SELECT ... $var"`) and concatenation through intermediate variables (`$foo = $_GET[...]; exec("cmd " . $foo)`), not just direct `$_GET` in sink.
+- **Coverage audit corpus grew from 42 to 60 cases** (18 new PHP cases).
+
+### Project scan UX
+- **Clickable findings**: every finding row in the Scan Project panel now opens the file at the exact line and column of the match, in a side editor.
+- **Severity filter**: `All / Critical only / Warnings only` pill buttons.
+- **File search**: live filter by path substring.
+- **Collapsible per-file groups** with expand/collapse-all controls.
+- **Stat cards** at the top showing critical / warnings / files-scanned.
+- File rows now sort by critical count (descending), then total findings.
+
+### Tooling
+- New `scripts/benchmark.ts` — scans any local directory with the same pipeline, prints summary (totals by severity, category, top files). Run with `npx tsx scripts/benchmark.ts <path>`.
+- New `scripts/benchmark-dvwa-ground-truth.ts` — targeted audit against DVWA's known-vulnerable canonical files.
+- `tsx` added as dev dependency (for benchmark script execution).
+
 ## 1.1.2
 
 ### Fixes (reduce false positives without hurting detection)
